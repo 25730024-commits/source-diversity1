@@ -1,0 +1,152 @@
+[
+ {
+  "id": "UCcQTRi69dsVYHN3exePtZ1A",
+  "name": "KBS News",
+  "type": "지상파",
+  "group": "KBS"
+ },
+ {
+  "id": "UCF4Wxdo3inmxP-Y59wXDsFw",
+  "name": "MBCNEWS",
+  "type": "지상파",
+  "group": "MBC"
+ },
+ {
+  "id": "UCkinYTS9IHqOEwR1Sze2JTw",
+  "name": "SBS 뉴스",
+  "type": "지상파",
+  "group": "SBS"
+ },
+ {
+  "id": "UCMEbRpvuwTbXxGiyDb1mT8w",
+  "name": "비디오머그 - VIDEOMUG",
+  "type": "지상파",
+  "group": "SBS"
+ },
+ {
+  "id": "UCsU-I-vHLiaMfV_ceaYz5rQ",
+  "name": "JTBC News",
+  "type": "종편",
+  "group": "JTBC"
+ },
+ {
+  "id": "UCWlV3Lz_55UaX4JsMj-z__Q",
+  "name": "뉴스TVCHOSUN",
+  "type": "종편",
+  "group": "TV조선"
+ },
+ {
+  "id": "UCfq4V1DAuaojnr2ryvWNysw",
+  "name": "채널A뉴스",
+  "type": "종편",
+  "group": "채널A"
+ },
+ {
+  "id": "UCG9aFJTZ-lMCHAiO1KJsirg",
+  "name": "MBN News",
+  "type": "종편",
+  "group": "MBN"
+ },
+ {
+  "id": "UChlgI3UHCOnwUGzWzbJ3H5w",
+  "name": "YTN",
+  "type": "보도전문",
+  "group": "YTN"
+ },
+ {
+  "id": "UCTHCOPwqNfZ0uiKOvFyhGwg",
+  "name": "연합뉴스TV",
+  "type": "보도전문",
+  "group": "연합뉴스"
+ },
+ {
+  "id": "UCj3_t5p4L4aFsvdW3uHjnnw",
+  "name": "연합뉴스",
+  "type": "통신사",
+  "group": "연합뉴스"
+ },
+ {
+  "id": "UCHBvfByzuzamrZiL398jopQ",
+  "name": "뉴스1TV",
+  "type": "통신사",
+  "group": "뉴스1"
+ },
+ {
+  "id": "UCdp4_yTBhQmB8E339Lafzow",
+  "name": "조선일보",
+  "type": "신문",
+  "group": "조선일보"
+ },
+ {
+  "id": "UC1aS5CRRDrN6CmR2VcpmetA",
+  "name": "한국일보",
+  "type": "신문",
+  "group": "한국일보"
+ },
+ {
+  "id": "UCH3mJ-nHxjjny2FJbJaqiDA",
+  "name": "중앙일보",
+  "type": "신문",
+  "group": "중앙일보"
+ },
+ {
+  "id": "UCnHyx6H7fhKfUoAAaVGYvxQ",
+  "name": "동아일보",
+  "type": "신문",
+  "group": "동아일보"
+ },
+ {
+  "id": "UCugbqfMO94F9guLEb6Olb2A",
+  "name": "한겨레",
+  "type": "신문",
+  "group": "한겨레"
+ },
+ {
+  "id": "UClAfLVQYZSLrMAQQ_SXPVZw",
+  "name": "오마이TV",
+  "type": "인터넷언론",
+  "group": "오마이뉴스"
+ },
+ {
+  "id": "UCOqCunaF9qVN8bXwsK0HT3g",
+  "name": "펜앤마이크TV",
+  "type": "인터넷언론",
+  "group": "펜앤마이크"
+ },
+ {
+  "id": "UCnfwIKyFYRuqZzzKBDt6JOA",
+  "name": "매일경제TV",
+  "type": "경제방송",
+  "group": "매일경제"
+ },
+ {
+  "id": "UCzznO4xSV8BKnUBPyswtCUw",
+  "name": "Arirang News",
+  "type": "해외송출",
+  "group": "아리랑TV"
+ },
+ {
+  "id": "UC_LI11UMIziSEk64Lg8MLDw",
+  "name": "정치유감",
+  "type": "시사유튜브",
+  "group": ""
+ },
+ {
+  "id": "UCNcUxF8bMNUlo7r1ht_CqJQ",
+  "name": "뉴스와사람들",
+  "type": "시사유튜브",
+  "group": ""
+ },
+ {
+  "id": "UC2mh3isUlxcxh4KshnuRxHw",
+  "name": "정치쉽단",
+  "type": "시사유튜브",
+  "group": ""
+ },
+ {
+  "id": "UCW3Q-cnRg9XQ2qKQHVL7TUA",
+  "name": "뉴스나우",
+  "type": "시사유튜브",
+  "group": ""
+ }
+]

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>분류율 측정 도구 (팀 내부용)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root { --bg:#f7f7f5; --fg:#1d1d1b; --mute:#6b6b66; --card:#fff; --line:#e2e2dc; --acc:#2d5bd1; --ok:#1f7a52; --warn:#a86a0a; --bad:#b42318;
+          --bar:#2d5bd1; --bar-other:#b8b8b0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161616; --fg:#eeeeea; --mute:#a3a39c; --card:#202020; --line:#33332f; --acc:#7da2ff; --ok:#4cc38a; --warn:#e0a040; --bad:#ff7a6e; --bar:#7da2ff; --bar-other:#55554f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.55 -apple-system, "Pretendard", "Noto Sans KR", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--mute); margin: 0 0 16px; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; }
+  input[type=file] { width: 100%; padding: 12px; border: 2px dashed var(--line); border-radius: 10px; background: transparent; color: var(--fg); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  button { border: 1px solid var(--line); background: var(--card); color: var(--fg); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  button.primary { background: var(--acc); color: #fff; border-color: var(--acc); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .kpi { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .kpi b { display: block; font-size: 22px; }
+  .kpi span { color: var(--mute); font-size: 12px; }
+  .good { color: var(--ok); } .mid { color: var(--warn); } .low { color: var(--bad); }
+  .bar { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 13px; }
+  .bar .nm { width: 110px; flex: none; }
+  .bar .track { flex: 1; height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--bar); }
+  .bar .fill.other { background: var(--bar-other); }
+  .bar .v { width: 92px; flex: none; text-align: right; color: var(--mute); }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--mute); font-weight: 600; white-space: nowrap; }
+  td.t { color: var(--mute); max-width: 320px; }
+  .note { color: var(--mute); font-size: 12.5px; }
+  .err { color: var(--bad); }
+  .hidden { display: none; }
+  textarea { width: 100%; min-height: 120px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 12.5px/1.5 monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>분류율 측정 도구 <span class="note">(팀 내부용 · 임시)</span></h1>
+  <p class="sub">본인 Takeout 파일을 올리면 장르 분류가 얼마나 잘 되는지 확인합니다. 파일은 이 브라우저 밖으로 나가지 않습니다.</p>
+
+  <div class="card">
+    <h2>1. 시청기록 파일 선택</h2>
+    <input type="file" id="file" accept=".json,.html,.htm,.zip">
+    <div class="note" style="margin-top:8px">JSON(권장) · HTML · ZIP 모두 가능. 상태: <span id="status">사전 불러오는 중…</span></div>
+  </div>
+
+  <div id="out" class="hidden">
+    <div class="card">
+      <h2>2. 한눈에 보기</h2>
+      <div class="kpis" id="kpis"></div>
+      <p class="note" id="kpiNote" style="margin-bottom:0"></p>
+    </div>
+
+    <div class="card">
+      <h2>3. 장르별 시청 건수</h2>
+      <div id="bars"></div>
+      <p class="note" id="typeLine"></p>
+    </div>
+
+    <div class="card">
+      <h2>4. '기타'로 떨어진 상위 채널 (키워드 보강용)</h2>
+      <p class="note">여기에 자주 나오는 종류가 있으면 키워드를 추가하거나 카테고리를 새로 만들지 고민해 보세요.</p>
+      <div class="scroll"><table id="otherTbl"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>5. 상위 채널의 분류 결과 (오분류 점검)</h2>
+      <p class="note">장르가 이상하게 붙은 채널이 있는지 눈으로 확인해 주세요.</p>
+      <div class="scroll"><table id="topTbl"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>6. 팀 공유용 복사</h2>
+      <p class="note">채널명은 개인의 시청 취향이 드러나므로 <b>요약 복사</b>(비율만)를 기본으로 쓰고, 키워드 보강이 필요할 때만 본인이 고른 내용을 공유하세요.</p>
+      <div class="row">
+        <button class="primary" onclick="copySummary()">요약 복사 (채널명 없음)</button>
+        <button onclick="copyOther()">'기타' 상위 채널명 복사 (공유 전 확인!)</button>
+      </div>
+      <textarea id="copyBox" readonly placeholder="복사된 내용이 여기에 표시됩니다"></textarea>
+    </div>
+  </div>
+  <p class="err" id="err"></p>
+</main>
+
+<script src="../js/config.js"></script>
+<script src="../js/parser.js"></script>
+<script src="../js/matcher.js"></script>
+<script src="../js/classifier.js"></script>
+<script>
+let NEWS = null, DICT = null, LAST = null;
+const $ = id => document.getElementById(id);
+const nameOf = id => (DICT.categories.find(c => c.id === id) || {}).name || id;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function boot() {
+  try {
+    const [a, b] = await Promise.all([fetch('../data/channels.json'), fetch('../data/genre_dictionary.json')]);
+    if (!a.ok || !b.ok) throw new Error('data 파일을 찾지 못했습니다');
+    NEWS = (await a.json()).filter(c => c.id);
+    DICT = await b.json();
+    $('status').textContent = '준비 완료 (뉴스 DB ' + NEWS.length + '개, 장르 ' + (DICT.categories.filter(c => c.enabled).length - 1) + '개)';
+  } catch (e) {
+    $('status').textContent = '실패';
+    $('err').textContent = '사전/DB를 불러오지 못했습니다. file:// 로 열지 말고 GitHub Pages 주소(또는 로컬 서버)에서 열어 주세요. (' + e.message + ')';
+  }
+}
+
+// ZIP이면 '시청 기록.json' > 'watch-history.json' > 이름에 '시청 기록'/'watch-history'가 든 html > 첫 html 순으로 선택
+async function readRecordsAny(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.zip')) {
+    if (typeof JSZip === 'undefined') throw new Error('ZIP 라이브러리를 불러오지 못했습니다(인터넷 연결 확인)');
+    const zip = await JSZip.loadAsync(file);
+    const entries = []; zip.forEach((p, e) => { if (!e.dir) entries.push([p, e]); });
+    const lc = p => p.toLowerCase();
+    const pick = entries.find(([p]) => lc(p).endsWith('시청 기록.json') || lc(p).endsWith('watch-history.json'))
+      || entries.find(([p]) => lc(p).endsWith('.html') && (p.includes('시청 기록') || lc(p).includes('watch-history')))
+      || entries.find(([p]) => lc(p).endsWith('.html'));
+    if (!pick) throw new Error('ZIP 안에서 시청기록 파일을 찾지 못했습니다');
+    const text = await pick[1].async('string');
+    return { records: lc(pick[0]).endsWith('.json') ? parseJSONHistory(JSON.parse(text)) : parseHTMLHistory(text), source: pick[0] };
+  }
+  const text = await file.text();
+  if (name.endsWith('.json')) return { records: parseJSONHistory(JSON.parse(text)), source: file.name };
+  return { records: parseHTMLHistory(text), source: file.name };
+}
+
+$('file').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  $('err').textContent = '';
+  if (!NEWS || !DICT) { $('err').textContent = '사전이 아직 준비되지 않았습니다.'; return; }
+  try {
+    const { records, source } = await readRecordsAny(f);
+    if (!records.length) throw new Error('기록이 0건입니다');
+    LAST = classifyRecords(records, NEWS, DICT, { periodMonths: CONFIG.PERIOD_MONTHS });
+    LAST.source = source;
+    render(LAST);
+  } catch (e) {
+    $('out').classList.add('hidden');
+    $('err').textContent = '읽는 중 오류: ' + e.message;
+  }
+});
+
+function tone(v, good, mid) { return v >= good ? 'good' : v >= mid ? 'mid' : 'low'; }
+
+function render(r) {
+  $('out').classList.remove('hidden');
+  const kp = [
+    ['전체 기록', r.total.toLocaleString() + '건', ''],
+    ['분석 대상 (최근 ' + CONFIG.PERIOD_MONTHS + '개월, 채널 있음)', r.usable.toLocaleString() + '건', ''],
+    ['분류율 (기타 제외)', r.classifiedRate + '%', tone(r.classifiedRate, 70, 50)],
+    ['제목 인식률', r.titleRate + '%', tone(r.titleRate, 90, 50)]
+  ];
+  $('kpis').innerHTML = kp.map(k => '<div class="kpi"><b class="' + k[2] + '">' + esc(k[1]) + '</b><span>' + esc(k[0]) + '</span></div>').join('');
+  $('kpiNote').textContent = '제외: 채널 정보 없음 ' + r.noChannel + '건, 기간 밖 ' + r.outOfPeriod + '건 · 파일: ' + r.source
+    + (r.titleRate < 50 ? ' · ⚠ 제목 인식률이 낮아요. 파서(제목 읽기)를 확인해야 합니다.' : '')
+    + (r.classifiedRate < 50 ? ' · ⚠ 분류율이 낮아요. 아래 4번을 보고 키워드를 보강하세요.' : '');
+
+  const ids = Object.keys(r.genreCounts).sort((a, b) => r.genreCounts[b] - r.genreCounts[a]);
+  const max = Math.max(...ids.map(i => r.genreCounts[i]), 1);
+  $('bars').innerHTML = ids.map(i => {
+    const n = r.genreCounts[i], pct = (n / r.usable * 100).toFixed(1);
+    return '<div class="bar"><span class="nm">' + esc(nameOf(i)) + '</span><span class="track"><span class="fill' + (i === 'other' ? ' other' : '') + '" style="display:block;width:' + (n / max * 100) + '%"></span></span><span class="v">' + n + '건 · ' + pct + '%</span></div>';
+  }).join('');
+  const t = assignType(r.genreCounts, DICT), h = genreHHI(r.genreCounts);
+  $('typeLine').textContent = '유형(임시): ' + (t.type || t.note) + (h != null ? ' · 장르 편중도(HHI, 기타 제외): ' + h.toLocaleString() : '');
+
+  const rowOther = c => '<tr><td>' + esc(c.name) + '</td><td>' + c.count + '</td><td class="t">' + esc((c.titles || []).slice(0, 2).join(' / ')) + '</td></tr>';
+  $('otherTbl').innerHTML = '<tr><th>채널명</th><th>건수</th><th>영상 제목 예시</th></tr>' + (r.otherTop.map(rowOther).join('') || '<tr><td colspan="3">기타로 떨어진 채널이 없습니다 🎉</td></tr>');
+  $('topTbl').innerHTML = '<tr><th>채널명</th><th>건수</th><th>분류 장르</th><th>방식</th></tr>'
+    + r.channels.slice(0, 15).map(c => '<tr><td>' + esc(c.name) + '</td><td>' + c.count + '</td><td>' + esc(nameOf(c.genre)) + '</td><td class="note">' + (c.fixed ? '확정(DB/Topic)' : '키워드 ' + c.score + '점') + '</td></tr>').join('');
+  $('copyBox').value = '';
+}
+
+function copySummary() {
+  if (!LAST) return;
+  const r = LAST, ids = Object.keys(r.genreCounts).sort((a, b) => r.genreCounts[b] - r.genreCounts[a]);
+  const t = assignType(r.genreCounts, DICT);
+  const txt = '[분류율 측정] 분석 ' + r.usable + '건 · 분류율 ' + r.classifiedRate + '% · 제목 인식률 ' + r.titleRate + '%\n'
+    + ids.map(i => '- ' + nameOf(i) + ' ' + (r.genreCounts[i] / r.usable * 100).toFixed(1) + '%').join('\n')
+    + '\n유형(임시): ' + (t.type || t.note);
+  out(txt);
+}
+function copyOther() {
+  if (!LAST) return;
+  out('[기타로 떨어진 상위 채널]\n' + LAST.otherTop.map(c => '- ' + c.name + ' (' + c.count + '건)').join('\n'));
+}
+function out(txt) {
+  $('copyBox').value = txt;
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(() => {});
+}
+
+boot();
+</script>
+</body>
+</html>

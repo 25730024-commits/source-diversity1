@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>진단 이력 - 정보편식 진단기</title>
+<link rel="stylesheet" href="./css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="band">
+  <header><div class="wrap topbar">
+    <a class="logo" href="./index.html" aria-label="정보편식 진단기 홈으로">
+      <svg class="logo-mark" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" focusable="false">
+        <rect width="32" height="32" rx="8" fill="#13305a"/>
+        <rect x="6" y="19" width="5" height="7" rx="1.5" fill="#8fb2f0"/>
+        <rect x="13.5" y="15" width="5" height="11" rx="1.5" fill="#8fb2f0"/>
+        <rect x="21" y="6" width="5" height="20" rx="1.5" fill="#fff"/>
+      </svg>
+      <img class="logo-img" id="logo-img" alt="" hidden>
+      <span>정보편식 진단기</span>
+    </a>
+    <nav class="nav">
+      <button onclick="location.href='./index.html'">홈</button>
+      <button onclick="location.href='./index.html#start'">진단하기</button>
+      <button class="active" aria-current="page">진단 이력</button>
+    </nav>
+  </div></header>
+</div>
+<main class="wrap hist">
+  <h2>진단 이력</h2>
+  <p class="sub">이 브라우저에 저장된 결과 요약입니다. 원본 시청기록은 저장하지 않습니다.</p>
+  <div class="panel"><h4>HHI 변화</h4><canvas id="trend" height="120" role="img" aria-label="진단 이력별 HHI 변화 그래프"></canvas><p class="hist-empty" id="trend-note"></p></div>
+  <div class="panel" id="cmp-panel">
+    <h4>두 진단 비교</h4>
+    <p class="hist-empty" id="cmp-note"></p>
+    <div id="cmp-box">
+      <div class="cmp-pick">
+        <label>진단 ①<select id="cmp-a"></select></label>
+        <label>진단 ②<select id="cmp-b"></select></label>
+        <button class="chip-btn dark" id="cmp-btn">비교하기</button>
+      </div>
+      <div id="cmp-out" hidden>
+        <p class="cmp-sentence" id="cmp-sentence"></p>
+        <div class="table-wrap"><table class="table"><thead><tr><th>항목</th><th>이전</th><th>이후</th></tr></thead><tbody id="cmp-body"></tbody></table></div>
+        <p class="cmp-top" id="cmp-top"></p>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <h4>저장된 진단</h4>
+    <div class="table-wrap"><table class="table hist-table">
+      <thead><tr><th>날짜</th><th>HHI</th><th>등급</th><th>CR3</th><th>뉴스 시청</th><th>상위 채널</th><th></th></tr></thead>
+      <tbody id="hist-body"></tbody>
+    </table></div>
+    <p class="hist-empty" id="hist-empty">저장된 진단 이력이 없습니다.</p>
+    <button class="chip-btn" id="clear-btn">전체 삭제</button>
+  </div>
+</main>
+<script src="./js/config.js"></script>
+<script src="./js/storage.js"></script>
+<script src="./js/messages.js"></script>
+<script src="./js/history.js"></script>
+</body>
+</html>

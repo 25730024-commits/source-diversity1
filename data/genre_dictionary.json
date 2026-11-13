@@ -1,0 +1,119 @@
+{
+  "_meta": {
+    "version": "draft-0.1",
+    "date": "2026-11-13",
+    "status": "임시 초안 - 팀 검토 후 확정 필요. 모든 임계값(threshold)은 임의값이며 실제 Takeout 파일로 보정해야 함",
+    "matching": "소문자 변환 후 비교. 한글 키워드는 부분 문자열 일치, 영문 키워드는 단어 단위 일치(예: 'mv'가 'mvp' 안에서 걸리지 않도록)",
+    "privacy_note": "영상 제목(title)을 사용하므로 동의 모달·동의서의 '채널명·채널 ID·시청일시 외 정보는 사용하지 않는다' 문구를 반드시 수정해야 함"
+  },
+
+  "categories": [
+    { "id": "vlog",   "name": "브이로그·일상", "enabled": true },
+    { "id": "game",   "name": "게임",          "enabled": true },
+    { "id": "food",   "name": "먹방·요리",     "enabled": true },
+    { "id": "music",  "name": "음악",          "enabled": true },
+    { "id": "ent",    "name": "예능·영화·드라마", "enabled": true },
+    { "id": "edu",    "name": "공부·교육",     "enabled": true },
+    { "id": "sports", "name": "스포츠·운동",   "enabled": true },
+    { "id": "news",   "name": "뉴스·시사",     "enabled": true },
+    { "id": "other",  "name": "기타(분류 안 됨)", "enabled": true },
+
+    { "id": "beauty", "name": "뷰티·패션",     "enabled": true },
+    { "id": "tech",   "name": "경제·재테크·IT", "enabled": true, "note": "뉴스 DB 25개는 ID로 먼저 뉴스 확정되므로 겹침 위험은 DB 밖 채널에만 해당. '경제', '리뷰'처럼 너무 넓은 키워드는 제거함" }
+  ],
+
+  "priority_order": ["news", "music", "game", "food", "sports", "edu", "ent", "vlog", "beauty", "tech"],
+
+  "rules": {
+    "step1_news_db": "채널 ID가 channels.json(뉴스 DB 25개)에 있으면 무조건 news로 확정. 키워드 점수 계산 안 함",
+    "step2_topic_channel": "채널명이 ' - Topic'으로 끝나면 music으로 확정 (YouTube Music 자동 생성 채널 관례)",
+    "step3_score": {
+      "weights": {
+        "strong_in_channel_name": 6,
+        "strong_in_title": 3,
+        "weak_in_channel_name": 2,
+        "weak_in_title": 1
+      },
+      "unit": "채널 단위. 같은 채널의 모든 시청 기록(기간 내)에서 점수를 합산해 채널의 장르를 정하고, 그 채널의 영상은 모두 같은 장르로 센다",
+      "assign": "1위 점수가 min_top_score 이상이고, 2위 점수의 min_ratio_to_second 배 이상이면 1위 장르. 아니면 other",
+      "min_top_score": 6,
+      "min_ratio_to_second": 1.5,
+      "tie_break": "priority_order 순서"
+    },
+    "known_limits": [
+      "여러 장르를 다루는 채널은 한 장르로만 분류됨",
+      "제목에 키워드가 없는 영상은 other로 떨어짐 -> 분류율(other 제외 비율)을 반드시 측정할 것",
+      "news 장르에 키워드로 잡힌 채널은 '뉴스 편중도(HHI)' 계산 대상이 아님. 뉴스 진단은 기존대로 DB 25개 기준"
+    ]
+  },
+
+  "keywords": {
+    "news": {
+      "strong": ["속보", "뉴스특보", "시사", "정치", "국회", "대통령", "앵커", "기자회견", "사설", "여야", "탄핵", "총선", "대선"],
+      "weak":   ["뉴스", "이슈", "논란", "브리핑", "news", "breaking"]
+    },
+    "vlog": {
+      "strong": ["브이로그", "vlog", "일상", "데일리", "하루", "룸투어", "자취", "출근", "퇴근", "갓생", "모닝루틴", "루틴"],
+      "weak":   ["여행", "카페", "이사", "주말", "데이트", "휴가", "집들이"]
+    },
+    "game": {
+      "strong": ["게임", "gameplay", "플레이", "공략", "실황", "롤토체스", "리그오브레전드", "league of legends", "발로란트", "valorant", "마인크래프트", "minecraft", "오버워치", "배틀그라운드", "서든어택", "로블록스", "roblox", "메이플", "던전앤파이터", "디아블로", "젤다", "포켓몬", "steam", "스팀", "lol"],
+      "weak":   ["랭크", "티어", "패치노트", "신작", "엔딩", "스트리머", "라이브"]
+    },
+    "food": {
+      "strong": ["먹방", "mukbang", "레시피", "recipe", "요리", "쿡방", "cooking", "맛집", "베이킹", "집밥", "디저트", "편의점"],
+      "weak":   ["음식", "라면", "맛있", "먹어", "술", "카페"]
+    },
+    "music": {
+      "strong": ["mv", "official audio", "lyrics", "가사", "플레이리스트", "playlist", "뮤직비디오", "music video", "음원", "앨범", "콘서트", "직캠", "커버", "cover", "노래"],
+      "weak":   ["라이브", "공연", "밴드", "피아노", "연주", "ost"]
+    },
+    "ent": {
+      "strong": ["예능", "드라마", "영화", "예고편", "trailer", "웹예능", "웹드라마", "시트콤", "다시보기", "개봉", "넷플릭스", "netflix", "티빙", "정주행"],
+      "weak":   ["레전드", "모음", "에피소드", "시즌", "하이라이트", "클립"]
+    },
+    "edu": {
+      "strong": ["강의", "강좌", "공부", "수능", "토익", "자격증", "코딩", "파이썬", "python", "영어회화", "인강", "특강", "스터디윗미", "study with me", "공시", "컴활", "한국사", "다큐"],
+      "weak":   ["영어", "수학", "과학", "기초", "입문", "원리", "튜토리얼", "tutorial", "배우기", "설명"]
+    },
+    "sports": {
+      "strong": ["축구", "야구", "농구", "배구", "골프", "테니스", "kbo", "mlb", "nba", "epl", "k리그", "프리미어리그", "챔피언스리그", "월드컵", "올림픽", "운동", "헬스", "홈트", "러닝", "크로스핏", "요가"],
+      "weak":   ["다이어트", "경기", "선수", "하이라이트"]
+    },
+    "beauty": {
+      "strong": ["메이크업", "화장품", "뷰티", "스킨케어", "패션", "코디", "ootd", "올리브영", "향수", "립", "쿠션", "헤어", "네일", "다이어트룩"],
+      "weak":   ["하울", "추천템", "데일리룩", "스타일링", "신상"]
+    },
+    "tech": {
+      "strong": ["재테크", "주식", "투자", "부동산", "비트코인", "코인", "etf", "아이폰", "갤럭시", "노트북", "언박싱", "맥북", "아이패드", "ai", "챗gpt", "chatgpt", "개발자", "스마트폰"],
+      "weak":   ["금리", "환율", "개봉기", "성능", "스펙", "앱"]
+    }
+  },
+
+  "types": {
+    "_note": "임시 규칙. 장르별 시청 비중(share)을 기준으로 유형 이름을 붙임. 정치적 성향을 암시하는 이름 금지. 임계값은 11/15 분류율 점검 후 조정",
+    "guard": {
+      "other_share_over": 50,
+      "result": "분류율이 낮아 유형 진단을 보류합니다 (기타 비중이 절반을 넘음)"
+    },
+    "rules_in_order": [
+      { "if": "top_share >= 40", "type": "dominant_genre" },
+      { "if": "top_share < 25 and used_categories >= 5", "type": "장르 뷔페형" },
+      { "if": "top2_share_sum >= 60", "type": "투 트랙형 (A + B)" },
+      { "else": "다채로운 시청자형" }
+    ],
+    "dominant_genre_names": {
+      "vlog": "브이로그 애청자",
+      "game": "게임 몰입러",
+      "food": "먹방 탐험가",
+      "music": "플레이리스트 수집가",
+      "ent": "예능·드라마 정주행러",
+      "edu": "배움 탐구형",
+      "sports": "스포츠 열혈 팬",
+      "news": "뉴스 탐독가",
+      "beauty": "뷰티·패션 트렌드 헌터",
+      "tech": "IT·재테크 탐구가"
+    },
+    "genre_hhi": "장르 비중(%)을 제곱해 합산 (뉴스 편중도와 같은 공식). 구간은 기존 GRADES 재사용 후보 - 팀 확정 필요"
+  }
+}

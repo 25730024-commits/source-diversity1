@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>정보편식 진단기 - 꼬꼬꼬몽</title>
+<link rel="stylesheet" href="./css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body><!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>뉴스·시사 출처 다양성 분석</title>
+<!-- Chart.js 및 JSZip 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- [추가된 부분] html2canvas 및 카카오톡 SDK 라이브러리 추가 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>
+
+<style>
+*{box-sizing:border-box}
+:root{
+  --ink:#14202f;--muted:#5d6b80;--line:#d3dae4;--page:#edf1f6;--navy:#0B1F3A;--navy2:#13305a;--blue:#2F6FEB;--sky:#8fb2f0;
+  --g:#B42318;--gsoft:#FCE7E5; /* 등급 색상: 분석 후 JS가 덮어씀 */
+}
+body{margin:0;font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:var(--page);color:var(--ink);line-height:1.6;font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer}
+a{color:var(--blue)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 32px}
+.band{background:var(--navy);color:#fff;padding-top:env(safe-area-inset-top,0px)}
+header{border-bottom:1px solid rgba(255,255,255,.14)}
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px 24px;min-height:64px;padding-top:14px;padding-bottom:14px}
+.logo{font-weight:700;font-size:17px;line-height:1.5;letter-spacing:-.01em;color:#fff;white-space:nowrap}
+.nav{display:flex;gap:26px}
+.nav button{border:0;background:none;padding:8px 0;color:#b6c4da;font-size:14px;line-height:1.5;white-space:nowrap;border-bottom:2px solid transparent}
+.nav button:hover,.nav button.active{color:#fff;border-bottom-color:#fff}
+
+/* ── 인트로 (분석 전에만 표시) ── */
+.intro{padding:68px 0 52px}
+.eyebrow{font-size:13px;color:var(--sky);margin:0 0 14px}
+.intro h1{font-size:40px;line-height:1.3;letter-spacing:-.025em;margin:0 0 18px;color:#fff;font-weight:700}
+.intro p.lead{max-width:580px;margin:0;color:#c9d6e8;font-size:16px}
+.actions{display:flex;gap:14px;align-items:center;margin-top:30px;flex-wrap:wrap}
+.btn-main{background:#fff;color:var(--navy);border:0;border-radius:4px;padding:13px 24px;font-weight:700;font-size:15px}
+.btn-main:hover{background:#e6eefb}
+.btn-line{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:12px 20px;font-weight:600;font-size:15px;text-decoration:none}
+.btn-line:hover{border-color:#fff}
+.btn-text{background:none;border:0;color:var(--sky);font-size:15px;padding:12px 4px;text-decoration:underline;text-underline-offset:3px}
+.assure{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,.14)}
+.assure div{padding:18px 0;font-size:13.5px;color:#c9d6e8}
+.assure div+div{padding-left:26px;border-left:1px solid rgba(255,255,255,.14)}
+.assure b{display:block;color:#fff;font-size:14px;margin-bottom:2px}
+body.has-result .intro,body.has-result .assure{display:none}
+body.has-result .band{padding-bottom:0}
+
+/* ── 결과 영역 ── */
+#result{display:none;padding-top:32px;scroll-margin-top:12px}
+body.has-result #result{display:block}
+.result-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.result-bar h2{margin:0;font-size:15px;color:var(--navy);font-weight:700}
+.result-bar .meta{font-size:13px;color:var(--muted)}
+.result-actions{display:flex;gap:8px}
+.chip-btn{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:600}
+.chip-btn:hover{border-color:var(--navy)}
+.chip-btn.dark{background:var(--navy);border-color:var(--navy);color:#fff}
+
+.verdict{background:#fff;border:1px solid var(--line);border-top:10px solid var(--g);border-radius:8px;box-shadow:0 14px 40px rgba(11,31,58,.14);overflow:hidden}
+.verdict-top{display:grid;grid-template-columns:1.45fr 1fr}
+.v-main{background:var(--gsoft);padding:36px 40px 30px}
+.v-label{font-size:13px;font-weight:700;color:var(--navy);letter-spacing:.02em;margin:0 0 14px}
+.grade-badge{display:inline-flex;align-items:center;gap:10px;background:var(--g);color:#fff;border-radius:999px;padding:8px 20px 8px 8px;font-size:19px;font-weight:800;letter-spacing:-.01em}
+.grade-badge .lv{background:#fff;color:var(--g);border-radius:999px;padding:2px 12px;font-size:14px;font-weight:800}
+.v-score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:18px 0 6px}
+.v-score .num{font-size:clamp(68px,12vw,120px);line-height:1;font-weight:800;color:var(--g);letter-spacing:-.04em}
+.v-score .den{font-size:17px;color:var(--muted);font-weight:600}
+.v-name{font-size:13.5px;color:var(--muted);margin:0 0 14px}
+.v-desc{font-size:17px;font-weight:600;color:var(--navy);margin:0;max-width:520px;line-height:1.6}
+.v-side{padding:36px 36px 30px;display:flex;flex-direction:column;justify-content:center;gap:26px}
+.stat-label{font-size:13px;color:var(--muted);margin:0}
+.stat-num{font-size:52px;line-height:1.1;font-weight:800;color:var(--navy);letter-spacing:-.03em;margin:4px 0 2px}
+.stat-num small{font-size:20px;font-weight:700;margin-left:2px}
+.stat-sub{font-size:12.5px;color:var(--muted);margin:0}
+.mini-bar{height:10px;background:#e1e8f1;border-radius:3px;overflow:hidden;margin-top:10px}
+.mini-bar i{display:block;height:100%;width:0;background:var(--navy2);border-radius:3px;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.v-divider{border:0;border-top:1px solid var(--line);margin:0}
+
+/* 게이지 */
+.v-gauge{padding:26px 40px 30px;border-top:1px solid var(--line)}
+.gauge-title{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}
+.gauge-title b{color:var(--navy)}
+.gauge{position:relative;padding-top:58px}
+.track{display:flex;height:20px;border-radius:4px;overflow:hidden;gap:2px}
+.track i{display:block;height:100%;opacity:.28;transition:opacity .4s}
+.track i.on{opacity:1}
+.pin{position:absolute;top:0;left:0;width:0;transition:left 1s cubic-bezier(.2,.8,.2,1)}
+.pin .bubble{position:absolute;top:0;left:0;transform:translateX(-50%);background:var(--g);color:#fff;font-weight:800;font-size:13.5px;padding:5px 12px;border-radius:4px;white-space:nowrap}
+.pin.edge-l .bubble{transform:translateX(-6px)}
+.pin.edge-r .bubble{transform:translateX(calc(-100% + 6px))}
+.pin .stem{position:absolute;top:30px;left:-2px;width:4px;height:50px;background:var(--g);border-radius:2px}
+.ticks{position:relative;height:20px;margin-top:6px;font-size:11.5px;color:var(--muted)}
+.ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.ticks span:first-child{transform:none}
+.ticks span:last-child{transform:translateX(-100%)}
+.legend4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.lg{border:1px solid var(--line);border-radius:4px;padding:10px 12px;font-size:12.5px;color:var(--muted);background:#fff;opacity:.6}
+.lg b{display:flex;align-items:center;gap:6px;color:var(--navy);font-size:13px;margin-bottom:2px}
+.lg b:before{content:"";width:10px;height:10px;border-radius:2px;background:var(--c)}
+.lg.on{opacity:1;border:2px solid var(--c);background:#fff;padding:9px 11px;box-shadow:0 4px 12px rgba(11,31,58,.1)}
+
+/* 상세 */
+.detail{display:grid;grid-template-columns:.9fr 1.1fr;gap:20px;margin-top:20px}
+.panel{border:1px solid var(--line);border-radius:6px;padding:24px;background:#fff}
+.panel h4{margin:0 0 18px;font-size:15px;color:var(--navy)}
+.table{width:100%;border-collapse:collapse;font-size:14px}
+.table th{color:var(--navy);background:#e8eef6;font-weight:600;text-align:left;padding:11px 10px;font-size:13px}
+.table td{padding:12px 10px;border-bottom:1px solid #e4eaf2}
+.table tr.top1 td{background:var(--gsoft);font-weight:700}
+.rank{color:var(--muted);width:52px}
+.share-cell{display:flex;align-items:center;gap:10px;min-width:120px}
+.share-cell .sb{flex:1;height:8px;background:#e1e8f1;border-radius:2px;overflow:hidden}
+.share-cell .sb i{display:block;height:100%;background:var(--navy2)}
+.share-cell span{min-width:46px;text-align:right}
+.info{background:#eef3f9;border-radius:4px;padding:12px 14px;font-size:12.5px;color:var(--muted);margin-top:20px}
+
+/* ── 유튜브 시청 유형 카드 ── */
+.youtube-type-result{width:100%;margin:28px 0 30px;padding:30px 32px;background:#fff;border:1px solid #e1e6ed;border-radius:14px;box-shadow:0 8px 26px rgba(20,32,47,.055);}
+.type-kicker{font-size:11px;letter-spacing:.14em;font-weight:800;color:#63748a;margin-bottom:7px}
+.type-heading{font-size:21px;line-height:1.35;font-weight:800;letter-spacing:-.035em;color:#17283e;margin-bottom:20px}
+.type-feature{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:26px 28px;background:#f4f7fb;border:1px solid #e7edf4;border-radius:10px}
+.type-feature-copy{min-width:0}
+.type-overline{font-size:11px;font-weight:800;letter-spacing:.12em;color:#60758f}
+.type-feature h2{margin:8px 0 7px;font-size:clamp(23px,3.4vw,34px);line-height:1.3;letter-spacing:-.045em;color:#17283e}
+.type-feature h2 em{font-style:normal;color:#315f9f}
+.type-feature p{margin:0;color:#526276;font-size:15px}
+.type-share{display:flex;align-items:baseline;gap:10px;margin-top:19px}
+.type-share strong{font-size:32px;line-height:1;color:#244f87;letter-spacing:-.04em}
+.type-share span{font-size:12px;color:#6c7a8d}
+.type-feature-icon{flex:0 0 86px;width:86px;height:86px;display:grid;place-items:center;border-radius:50%;background:#e6edf6;font-size:42px}
+.type-stats-title{margin:23px 0 10px;font-size:13px;font-weight:800;color:#26384e}
+.type-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px}
+.type-stat{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;padding:13px 14px;border:1px solid #e8edf3;border-radius:8px;background:#fff}
+.type-stat.is-top{border-color:#9fb5d1;background:#f8fafd}
+.type-stat-name{font-size:12px;font-weight:700;color:#394b60}
+.type-stat strong{font-size:17px;color:#213c60}
+.type-stat-count{grid-column:1/-1;font-size:11px;color:#8995a4}
+.type-footnote{margin:14px 0 0;font-size:11px;line-height:1.6;color:#8490a0}
+.type-empty{padding:22px;background:#f5f7fa;border-radius:8px;color:#66758a}
+@media(max-width:760px){.youtube-type-result{margin:18px 0 22px;padding:22px 18px;border-radius:11px}.type-heading{font-size:19px}.type-feature{padding:20px 17px;gap:10px}.type-feature-icon{flex-basis:62px;width:62px;height:62px;font-size:31px}.type-feature h2{font-size:23px}.type-feature p{font-size:13px}.type-share strong{font-size:28px}.type-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 모달 */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(10,18,30,.55);padding:24px;z-index:999;overflow-y:auto}
+.modal-bg.show{display:flex}
+.modal-bg.show .modal{margin:auto}
+.modal{background:#fff;border-radius:6px;width:min(580px,100%);padding:30px}
+.modal h3{margin:0 0 4px;font-size:20px;color:var(--navy)}
+.takeout-guide{background:#eef3f9;border-radius:4px;padding:16px 18px;margin:18px 0;font-size:13.5px;color:#34455c}
+.takeout-guide strong{display:block;margin-bottom:8px;color:var(--navy);font-size:14px}
+.takeout-guide ol{margin:0;padding-left:18px}
+.takeout-guide li{margin-bottom:6px}
+.drop{position:relative;display:block;border:1px dashed #8fa0b8;background:#f7f9fc;border-radius:4px;padding:28px;text-align:center;color:var(--muted);cursor:pointer}
+.drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.drop:hover{border-color:var(--navy);color:var(--navy)}
+.privacy-note{font-size:12.5px;color:var(--muted);margin-top:14px}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+.btn{border:0;border-radius:4px;padding:11px 18px;font-size:14px}
+.btn.gray{background:#fff;border:1px solid var(--line);color:var(--ink)}
+
+/* ── 진단 요약 · 홈 안내 (v4.1) ── */
+.sum{padding-top:40px;scroll-margin-top:12px}
+body.has-result .sum{padding-top:32px}
+.sum-head,.guide-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-top:2px solid var(--navy);padding-top:14px;margin-bottom:14px}
+.sum-head h2,.guide-head h2{margin:0;font-size:19px;color:var(--navy);letter-spacing:-.01em}
+.sum-head span,.guide-head span{font-size:13px;color:var(--muted)}
+.sum-line{margin:0 0 16px;padding:14px 18px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--navy2);border-radius:4px;font-size:15px;color:var(--ink)}
+body.has-result .sum-line{border-left-color:var(--g);background:var(--gsoft);font-weight:600;color:var(--navy)}
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.sum-card{background:#fff;padding:20px 22px;border-top:4px solid transparent}
+body.has-result .sum-card{border-top-color:var(--g)}
+.sum-k{font-size:13px;color:var(--muted)}
+.sum-v{font-size:34px;line-height:1.2;font-weight:800;color:var(--navy);letter-spacing:-.02em;margin:6px 0 4px;color:#98a1b0}
+body.has-result .sum-v{color:var(--navy)}
+body.has-result .sum-card.hl .sum-v{color:var(--g)}
+.sum-v.txt{font-size:22px;line-height:1.35;overflow-wrap:anywhere;word-break:keep-all}
+.sum-s{font-size:12.5px;color:var(--muted)}
+.guide{padding-top:44px}
+.steps,.gcards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.steps{margin-bottom:34px}
+.step{background:#fff;border:1px solid var(--line);border-radius:6px;padding:18px}
+.step i{font-style:normal;font-size:12px;font-weight:800;color:var(--blue)}
+.step b{display:block;color:var(--navy);margin:4px 0 2px;font-size:15px}
+.step span{font-size:13px;color:var(--muted)}
+.gcard{background:#fff;border:1px solid var(--line);border-top:6px solid var(--c);border-radius:6px;padding:16px 18px}
+.gcard small{font-size:12px;font-weight:800;color:var(--c)}
+.gcard b{display:block;color:var(--navy);font-size:16px;margin:2px 0}
+.gcard em{display:block;font-style:normal;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.gcard span{font-size:12.5px;color:var(--muted);display:block}
+body.has-result #home-guide{display:none}
+@media(max-width:760px){.sum-grid,.steps,.gcards{grid-template-columns:repeat(2,1fr)}.sum-v{font-size:28px}.sum-head,.guide-head{flex-direction:column;gap:2px}}
+.btn.primary{background:var(--navy);color:#fff;font-weight:600}
+footer{margin-top:72px;background:var(--navy);color:#b6c4da;padding:30px 0 calc(40px + env(safe-area-inset-bottom,0px));font-size:13px}
+footer strong{color:#fff}
+footer p{margin:0 0 6px;max-width:640px}
+
+/* 결과 등장 애니메이션 */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+body.has-result .verdict{animation:rise .5s ease both}
+body.has-result .detail{animation:rise .6s .12s ease both}
+@media(prefers-reduced-motion:reduce){
+  body.has-result .verdict,body.has-result .detail{animation:none}
+  .pin,.mini-bar i{transition:none}
+}
+
+@media(max-width:760px){
+  .wrap{padding:0 16px}
+  .intro{padding:44px 0 32px}.intro h1{font-size:28px}
+  .nav{gap:16px}
+  .assure{grid-template-columns:1fr}.assure div+div{padding-left:0;border-left:0;border-top:1px solid rgba(255,255,255,.14)}
+  .verdict-top{grid-template-columns:1fr}
+  .v-main{padding:26px 22px 24px}
+  .v-side{padding:24px 22px;flex-direction:row;gap:20px}
+  .v-side>div{flex:1}
+  .stat-num{font-size:38px}
+  .v-gauge{padding:20px 22px 24px}
+  .ticks{display:none}
+  .legend4{grid-template-columns:1fr 1fr}
+  .detail{grid-template-columns:1fr}
+  .grade-badge{font-size:17px}
+}
+
+/* ── v5: 로고 · 홈 이동 · 반응형 ── */
+.logo{display:inline-flex;align-items:center;gap:10px;text-decoration:none;min-height:44px}
+.logo-mark{flex:none;display:block}
+.logo:hover span{text-decoration:underline;text-underline-offset:4px}
+.logo:focus-visible,.nav button:focus-visible,.btn-main:focus-visible,.btn-line:focus-visible,.btn-text:focus-visible,.chip-btn:focus-visible,.btn:focus-visible{outline:3px solid #8fb2f0;outline-offset:3px;border-radius:4px}
+.drop:focus-within{border-color:var(--navy);outline:3px solid #8fb2f0;outline-offset:2px}
+body:not(.has-data) .resume{display:none}
+body.has-data .resume{display:inline-flex;align-items:center}
+.nav button{min-height:44px;display:inline-flex;align-items:center}
+.btn-main,.btn-line,.btn-text,.chip-btn,.btn{min-height:44px}
+.btn-line{display:inline-flex;align-items:center}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.panel{min-width:0}
+canvas{max-width:100%}
+.modal-bg.show{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.modal{max-height:none}
+
+/* 태블릿 · 작은 노트북 */
+@media(min-width:761px) and (max-width:1100px){
+  .wrap{padding:0 24px}
+  .intro h1{font-size:34px}
+  .verdict-top{grid-template-columns:1.2fr 1fr}
+  .v-main{padding:28px 28px 24px}
+  .v-side{padding:28px 24px}
+  .stat-num{font-size:44px}
+  .v-gauge{padding:22px 28px 26px}
+  .detail{grid-template-columns:1fr}
+  .sum-grid{grid-template-columns:repeat(2,1fr)}
+  .steps,.gcards{grid-template-columns:repeat(2,1fr)}
+  .legend4{grid-template-columns:repeat(2,1fr)}
+}
+
+/* 휴대폰: 내 결과를 먼저, 진단 요약은 그 아래 */
+@media(max-width:760px){
+  main.wrap{display:flex;flex-direction:column}
+  main.wrap>#youtube-type-result{order:1}
+  main.wrap>#summary{order:2}
+  main.wrap>#result{order:3}
+  main.wrap>#home-guide{order:4}
+  body.has-result .sum{padding-top:28px}
+  .topbar{padding-top:6px;padding-bottom:6px;gap:0 16px}
+  .nav{width:100%;justify-content:space-between;gap:8px}
+  .nav button{flex:1;justify-content:center;font-size:14px;padding:6px 4px}
+  .actions .btn-main,.actions .btn-line{flex:1 1 100%;justify-content:center;text-align:center}
+  .result-bar{align-items:flex-start}
+  .result-actions{width:100%}
+  .result-actions .chip-btn{flex:1}
+  .panel{padding:18px 16px}
+  .share-cell{min-width:0;gap:6px}
+  .share-cell .sb{min-width:24px}
+  .share-cell span{min-width:40px}
+  .table th,.table td{padding:10px 6px}
+  .rank{width:36px}
+  .sum-card{padding:16px 14px}
+  .modal-bg{padding:12px}
+  .modal{padding:20px 16px}
+  .modal-actions .btn{flex:1}
+  .drop{padding:22px 14px}
+}
+@media(max-width:380px){
+  .logo{font-size:16px}
+  .intro h1{font-size:25px}
+  .v-score .num{font-size:64px}
+  .v-side{flex-direction:column}
+  .sum-grid,.steps,.gcards,.legend4{grid-template-columns:1fr}
+  .grade-badge{font-size:15px}
+}
+
+/* ===== 전체 비주얼 리디자인: YOUTUBE VIBE ===== */
+:root{--ink:#28233b;--muted:#77718b;--line:#e9e3f2;--page:#faf7ff;--navy:#30264b;--navy2:#51406e;--blue:#7658d6;--sky:#c6b8ff;--g:#b42318;--gsoft:#fce7e5}
+body{background:#faf7ff;color:var(--ink);font-family:Inter,"Pretendard","Noto Sans KR",sans-serif;line-height:1.65}
+.wrap{max-width:1120px;padding:0 28px}
+.band{background:radial-gradient(ellipse at 85% 0%,#6651a1 0%,transparent 40%),linear-gradient(135deg,#30264b,#46335f 65%,#594579);color:#fff;overflow:hidden;position:relative}
+.band:after{content:"✦   ◌   ✧";position:absolute;right:4%;top:130px;color:#d7caff;font-size:48px;letter-spacing:22px;opacity:.32;pointer-events:none}
+header{border-bottom:1px solid #ffffff20;backdrop-filter:blur(12px)}
+.topbar{min-height:76px;padding:16px 0}.logo{font-size:18px;letter-spacing:-.04em;display:flex;align-items:center;gap:10px}.logo-mark rect:first-child{fill:#a58df4}.logo-mark rect:not(:first-child){fill:#fff}
+.nav{gap:8px}.nav button{padding:9px 15px;border-radius:999px;color:#e5ddf8;font-weight:600}.nav button:hover,.nav button.active{background:#ffffff20;color:#fff}
+.intro{padding:76px 0 54px;max-width:800px;position:relative;z-index:1}.eyebrow{display:inline-flex;padding:7px 13px;border:1px solid #ffffff38;background:#ffffff12;border-radius:999px;color:#e5dfff;font-size:12px;font-weight:800;letter-spacing:.08em}.intro h1{font-size:clamp(38px,6vw,66px);line-height:1.17;letter-spacing:-.065em;margin:18px 0 20px;font-weight:900}.lead{font-size:17px;color:#e2dcef;max-width:620px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.btn{border-radius:15px;font-weight:750;padding:13px 20px;transition:transform .18s,box-shadow .18s}.btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px #21163330}.btn-main{background:#fff;color:#4c3975;border:0;border-radius:15px;font-weight:800;padding:14px 22px;box-shadow:0 8px 24px #20153330}.btn-line{border:1px solid #ffffff45;background:#ffffff12;color:#fff;border-radius:15px;padding:13px 18px;font-weight:700}.btn-text{color:#e6dcff}
+.assure{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:0 0 34px;position:relative;z-index:1}.assure>div{padding:16px 18px;border-radius:18px;background:#ffffff12;border:1px solid #ffffff22;color:#e2dcef;font-size:13px}.assure b{display:block;color:#fff;font-size:14px;margin-bottom:3px}
+main.wrap{padding-top:36px;padding-bottom:80px}section{scroll-margin-top:20px}.result-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:20px 0 18px}.result-bar h2,.panel h2{letter-spacing:-.04em;font-weight:850}.result-bar h2{font-size:28px}.meta{color:var(--muted)}
+.panel,.sum-card,.gcard,.step,.assure+.whatever{background:#fff;border:1px solid #eee8f6;border-radius:22px;box-shadow:0 8px 28px #45336a0b}.panel{padding:26px;margin:16px 0}.sum-grid{gap:14px}.sum-card{padding:22px}.sum-card h3{font-size:13px;color:#827994}.sum-card .num{color:#5c45a1;font-weight:900}.v-score,.grade-box{border-radius:26px;background:linear-gradient(135deg,#f0eaff,#fff4f8);border:1px solid #e6dcff}.grade-badge{border-radius:999px;background:#6d55b4;color:#fff;padding:8px 14px}
+.table-wrap{border:1px solid #eee8f6;border-radius:16px;overflow:hidden}.table th{background:#f6f2fc;color:#6e6387}.table td,.table th{border-color:#eee8f6}.bar,.progress{border-radius:999px;overflow:hidden}.gcard{padding:18px}.gcard h3{font-weight:800}
+.modal-bg{backdrop-filter:blur(7px);background:#21183299}.modal{border:1px solid #eee8f6;border-radius:24px;box-shadow:0 24px 80px #20153335}.drop{border:2px dashed #c9b9ef;background:#faf7ff;border-radius:18px}.drop:hover{background:#f2ecff;border-color:#8a70d7}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #a995f2;outline-offset:3px}
+@media(max-width:760px){.wrap{padding:0 18px}.intro{padding:54px 0 36px}.intro h1{font-size:clamp(34px,9vw,48px)}.lead{font-size:15px}.assure{grid-template-columns:1fr;gap:8px}.assure>div{padding:12px 15px}.topbar{align-items:flex-start}.nav{width:100%;justify-content:space-between}.nav button{font-size:12px;padding:8px 10px}.result-bar{align-items:flex-start;flex-direction:column}.result-bar h2{font-size:24px}.panel{padding:18px 15px;border-radius:18px}.sum-card{border-radius:18px}.actions>*{flex:1 1 100%;text-align:center}}
+
+
+.topic-list{display:grid;gap:13px}.topic-row>div:first-child{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}.topic-row span,.topic-unknown{color:#777;font-size:12px}.topic-track{height:9px;border-radius:20px;background:#eeeaf5;overflow:hidden}.topic-track i{display:block;height:100%;background:linear-gradient(90deg,#718bd0,#9b82d1);border-radius:20px}.diagnosis-title{display:block;font-size:22px;color:#5c45a1;margin:4px 0 10px}.diagnosis-copy p{line-height:1.7;color:#555}.recommendation-list{display:grid;gap:8px;margin-top:14px}.recommendation-item{background:#f7f4fc;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.6}.comparison-result{background:#f8f7fb;border-radius:14px;padding:16px;line-height:1.8;font-size:14px}
+
+
+/* ===== Trust-oriented editorial dashboard redesign ===== */
+:root{
+  --ink:#172b3a;--muted:#667987;--line:#dce5e9;--page:#f3f6f7;
+  --navy:#102b3a;--navy2:#19495a;--blue:#27677a;--sky:#a8d3d6;
+  --g:#286b70;--gsoft:#eaf3f2;
+}
+html{scroll-behavior:smooth}
+body{background:#f3f6f7;color:#1b303d;font-family:Inter,"Pretendard","Noto Sans KR","Apple SD Gothic Neo",sans-serif;letter-spacing:-.012em}
+.wrap{max-width:1120px;padding-left:clamp(18px,4vw,48px);padding-right:clamp(18px,4vw,48px)}
+.band{background:#102b3a;color:#fff;position:relative;overflow:hidden}
+.band:after{content:"";position:absolute;right:-110px;top:90px;width:430px;height:430px;border:1px solid rgba(180,220,220,.12);border-radius:50%;box-shadow:0 0 0 55px rgba(180,220,220,.035),0 0 0 110px rgba(180,220,220,.025);pointer-events:none}
+header{border-bottom:1px solid rgba(255,255,255,.13);position:relative;z-index:1}
+.topbar{min-height:76px;padding-top:14px;padding-bottom:14px}
+.logo{font-size:18px;font-weight:800;letter-spacing:-.04em;display:flex;align-items:center;gap:11px}
+.logo:before{content:"";display:inline-block;width:27px;height:27px;border:1.5px solid #9cc9ca;border-radius:7px;background:linear-gradient(135deg,transparent 45%,#9cc9ca 46%,#9cc9ca 53%,transparent 54%)}
+.nav{gap:24px}
+.nav button{font-size:13px;color:#bdcbd0;transition:.2s}
+.nav button:hover,.nav button.active{color:#fff;border-bottom-color:#a8d3d6}
+.intro{padding:76px 0 64px;position:relative;z-index:1}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;color:#9bc9ca;margin-bottom:20px}
+.intro h1{font-size:clamp(36px,5vw,58px);line-height:1.2;letter-spacing:-.055em;font-weight:750;margin-bottom:20px}
+.intro p.lead{font-size:16px;line-height:1.9;color:#d0dcdf;max-width:600px}
+.actions{margin-top:34px;gap:12px}
+.btn-main,.btn-line,.chip-btn{border-radius:7px;transition:all .2s ease}
+.btn-main{background:#d7eeee;color:#123543;padding:15px 25px;font-weight:800;box-shadow:0 5px 16px rgba(0,0,0,.12)}
+.btn-main:hover{background:#fff;transform:translateY(-1px)}
+.btn-line{border-color:rgba(220,241,240,.45);padding:14px 21px}
+.btn-line:hover{background:rgba(255,255,255,.08)}
+.btn-text{color:#b8dada}
+.assure{border-top-color:rgba(255,255,255,.14);max-width:860px}
+.assure div{padding:21px 18px 20px 0;color:#c3d1d5;font-size:12px;line-height:1.7}
+.assure div+div{padding-left:22px}
+.assure b{font-size:13px;letter-spacing:-.01em;margin-bottom:4px}
+#result{padding-top:34px;padding-bottom:64px}
+.result-bar{margin-bottom:18px}
+.result-bar h2{font-size:17px;letter-spacing:-.03em}
+.result-bar .meta{font-size:12px}
+.chip-btn{padding:9px 14px;border-radius:6px}
+.chip-btn.dark{background:#173d4b;border-color:#173d4b}
+.verdict{border:1px solid #dce5e9;border-top:0;border-radius:12px;box-shadow:0 12px 36px rgba(21,54,67,.07)}
+.verdict-top{grid-template-columns:1.35fr 1fr}
+.v-main{background:#eaf3f2;padding:clamp(24px,4vw,42px);border-top:5px solid var(--g)}
+.v-label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#55717a}
+.grade-badge{border-radius:7px;background:#286b70;padding:8px 14px;font-size:17px;letter-spacing:-.03em}
+.grade-badge .lv{border-radius:5px;color:#286b70}
+.v-score .num{font-size:clamp(58px,9vw,94px);color:#205c64}
+.v-score .den{font-size:15px}
+.v-name{font-size:12px}
+.v-desc{font-size:16px;line-height:1.8;color:#193744}
+.v-side{padding:clamp(24px,3.5vw,38px);gap:23px}
+.stat-label{font-size:12px}
+.stat-num{font-size:45px;color:#193c4b}
+.stat-sub{font-size:12px}
+.mini-bar{height:8px;border-radius:20px;background:#e8eef0}
+.mini-bar i{background:#3a7b80;border-radius:20px}
+.v-gauge{padding:26px clamp(22px,4vw,42px) 32px}
+.gauge-title{font-size:12px}
+.track{height:13px;border-radius:20px;gap:3px}
+.track i{border-radius:3px}
+.pin .bubble{border-radius:6px;background:#205e68}
+.pin .stem{background:#205e68}
+.legend4{gap:10px}
+.lg{border-radius:7px;padding:12px;background:#fbfcfc}
+.lg.on{padding:11px}
+.detail,.panel,.extra-diagnostic .panel{border:1px solid #dce5e9;border-radius:11px;background:#fff;box-shadow:0 5px 18px rgba(21,54,67,.035)}
+.panel{padding:23px}
+.panel h4,.detail h4{font-size:15px;color:#193744;letter-spacing:-.025em;margin-top:0}
+.extra-diagnostic{gap:16px}
+.topic-row>div:first-child{font-size:12px;color:#304d58}
+.topic-row span,.topic-unknown{color:#7b8b92}
+.topic-track{height:7px;background:#edf2f2;border-radius:20px}
+.topic-track i{background:#4b8587}
+.diagnosis-title{font-size:21px;color:#245f68}
+.recommendation-item{background:#f1f6f5;border:1px solid #e2ecea;border-radius:8px;color:#36535d;padding:13px 15px}
+.comparison-result{background:#f5f8f8;border:1px solid #e7eeee;border-radius:8px;color:#35515c}
+.info{color:#71838b;font-size:12px;line-height:1.7}
+footer{background:#102b3a;color:#bdcbd0}
+input,select,textarea{border-radius:7px!important}
+.modal,.modal-content,.upload-box{border-radius:12px}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #79b7b9;outline-offset:3px}
+@media(max-width:720px){
+ .wrap{padding-left:18px;padding-right:18px}
+ .intro{padding:52px 0 42px}
+ .intro h1{font-size:38px}
+ .intro p.lead{font-size:14px}
+ .assure{grid-template-columns:1fr;gap:0}
+ .assure div,.assure div+div{padding:12px 0;border-left:0;border-bottom:1px solid rgba(255,255,255,.1)}
+ .verdict-top{grid-template-columns:1fr}
+ .v-side{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:24px}
+ .stat-num{font-size:36px}
+ .legend4{grid-template-columns:repeat(2,1fr)}
+ .result-actions{width:100%;flex-wrap:wrap}
+ .result-actions button{flex:1}
+ .panel{padding:18px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+
+
+/* ===== Final polish: single brand mark + neutral score treatment ===== */
+.logo:before{content:none!important;display:none!important}
+.logo{gap:11px}
+.logo-mark{display:block;flex:0 0 32px}
+.logo-mark rect:first-child{fill:#286b70!important}
+.logo-mark rect:not(:first-child){fill:#fff!important}
+.v-score,.grade-box{
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+  flex-wrap:wrap;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  padding:0!important;
+}
+.v-score .num{color:#205e68!important}
+.grade-badge{background:#286b70!important;color:#fff!important}
+.grade-badge .lv{color:#286b70!important}
+.v-main{background:#eaf3f2!important}
+
+
+/* 진단 요약과 리포트의 정보 위계 및 순서 */
+#summary{padding-bottom:0}
+#summary-metrics,.sum-grid{margin-top:16px}
+#result{margin-top:0}
+@media(max-width:720px){.sum-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* 상세 리포트와 4개 핵심 지표를 하나의 리포트 그룹으로 구성 */
+.report-group{
+  background:#fff;
+  border:1px solid #dce5e9;
+  border-radius:14px;
+  padding:clamp(16px,2.5vw,28px);
+  margin:18px 0 34px;
+  box-shadow:0 8px 26px rgba(21,54,67,.045);
+}
+.report-group #result{padding-top:0}
+.report-group .sum-grid{
+  margin-top:26px;
+  padding-top:22px;
+  border-top:1px solid #e5ecee;
+  background:transparent;
+  border-left:0;border-right:0;border-bottom:0;
+  border-radius:0;
+  gap:12px;
+}
+.report-group .sum-card{
+  border:1px solid #e1e9eb;
+  border-top:3px solid #4b8587;
+  border-radius:9px;
+  box-shadow:none;
+}
+@media(max-width:720px){
+  .report-group{padding:14px;border-radius:10px}
+  .report-group .sum-grid{gap:8px}
+}
+
+
+/* 확실한 단일 리포트 컨테이너 */
+.news-report-group{
+  display:block;
+  margin:20px 0 36px;
+  padding:clamp(18px,2.7vw,30px);
+  background:#fff;
+  border:1px solid #d7e2e5;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(16,43,58,.07);
+}
+.news-report-group #result{
+  display:none;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+body.has-result .news-report-group #result{display:block}
+.news-report-group .result-bar{margin:0 0 22px}
+.news-report-group .verdict{box-shadow:none;border-color:#e1e9eb}
+.news-report-group .sum-grid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px!important;
+  margin:24px 0 0!important;
+  padding:22px 0 0!important;
+  border-top:1px solid #e3ebed!important;
+  border-left:0!important;border-right:0!important;border-bottom:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+.news-report-group .sum-card{
+  min-width:0;
+  border:1px solid #e0e9eb!important;
+  border-top:3px solid #4b8587!important;
+  border-radius:9px!important;
+  box-shadow:none!important;
+}
+@media(max-width:720px){
+  .news-report-group{padding:14px;margin-top:16px}
+  .news-report-group .sum-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+</style>
+</head>
+<body>
+<div class="band">
+  <header><div class="wrap topbar">
+    <a class="logo" href="#home" onclick="goHome(event)" aria-label="뉴스·시사 출처 분석 홈으로">
+      <svg class="logo-mark" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" focusable="false">
+        <rect width="32" height="32" rx="8" fill="#13305a"/>
+        <rect x="6" y="19" width="5" height="7" rx="1.5" fill="#8fb2f0"/>
+        <rect x="13.5" y="15" width="5" height="11" rx="1.5" fill="#8fb2f0"/>
+        <rect x="21" y="6" width="5" height="20" rx="1.5" fill="#fff"/>
+      </svg>
+      <span>뉴스·시사 출처 분석</span>
+    </a>
+    <nav class="nav">
+      <button id="nav-home" class="active" onclick="goHome()">대시보드</button>
+      <button onclick="openModal()">취향 분석하기</button>
+      <button id="nav-result" onclick="goResult()">내 결과</button>
+    </nav>
+  </div></header>
+  <div class="wrap">
+    <section class="intro">
+      <p class="eyebrow">NEWS & CURRENT AFFAIRS DIAGNOSTIC</p>
+      <h1>나의 뉴스·시사<br>시청 출처는?</h1>
+      <p class="lead">시청 기록에서 뉴스·시사 채널의 이용 분포와 출처 유형 구성을 확인합니다.</p>
+      <div class="actions">
+        <button class="btn-main" onclick="openModal()">출처 분석하기</button>
+        <a href="https://takeout.google.com" target="_blank" rel="noopener" class="btn-line">Google Takeout 열기</a>
+        <button class="btn-line resume" onclick="goResult()">최근 진단 결과 보기</button>
+        <button class="btn-text" onclick="loadSampleData()">예시 뉴스 데이터로 체험하기</button>
+      </div>
+    </section>
+    <div class="assure">
+      <div><b>서버에 저장하지 않음</b>시청기록은 브라우저 안에서만 처리</div>
+      <div><b>시청 출처 구조 분석</b>채널별 집중도와 출처 유형 구성 확인</div>
+      <div><b>분석 후 즉시 폐기</b>업로드한 파일은 결과 계산 뒤 삭제</div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <!-- 내 결과 (분석 후 화면 최상단에 크게 표시) -->
+  <section id="result" aria-live="polite">
+    <div class="result-bar">
+      <div>
+        <h2>나의 뉴스·시사 출처 분석 리포트</h2>
+        <span class="meta" id="analysis-date"></span>
+      </div>
+      <!-- [수정된 부분] 캡처, 공유 기능이 포함된 버튼 영역으로 교체 -->
+      <div class="result-actions">
+        <button class="chip-btn" onclick="captureReport()">📸 이미지 저장</button>
+        <button class="chip-btn" onclick="shareKakao()">💬 카카오톡 공유</button>
+        <button class="chip-btn" onclick="copyUrl()">🔗 URL 복사</button>
+        <button class="chip-btn dark" onclick="openModal()">다시 진단하기</button>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-top">
+        <div class="v-main">
+          <p class="v-label">채널별 시청 집중도</p>
+          <div class="grade-badge"><span class="lv" id="grade-lv">3단계</span><span id="grade-name">채널 집중 높음</span></div>
+          <div class="v-score"><span class="num" id="hhi-score">0</span><span class="den">/ 10,000점</span></div>
+          <p class="v-name">HHI 지수 · 뉴스 채널별 시청 점유율 제곱합</p>
+          <p class="v-desc" id="status-desc">파일을 업로드하면 결과가 표시됩니다.</p>
+        </div>
+        <div class="v-side">
+          <div>
+            <p class="stat-label">CR3 · 상위 3개 채널 비중</p>
+            <p class="stat-num"><span id="cr3-score">0</span><small>%</small></p>
+            <div class="mini-bar"><i id="cr3-bar-fill"></i></div>
+          </div>
+          <div>
+            <p class="stat-label">분석된 뉴스·시사 영상</p>
+            <p class="stat-num"><span id="news-count">0</span><small>개</small></p>
+            <p class="stat-sub" id="total-filtered-sub"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="v-gauge">
+        <div class="gauge-title"><span>채널별 시청 집중도 (HHI)</span><b id="gauge-note"></b></div>
+        <div class="gauge">
+          <div class="pin" id="pin"><div class="bubble" id="pin-bubble">0</div><div class="stem"></div></div>
+          <div class="track" id="track">
+            <i style="width:15%;background:#1F7A52"></i>
+            <i style="width:10%;background:#A86A0A"></i>
+            <i style="width:25%;background:#C2410C"></i>
+            <i style="width:50%;background:#B42318"></i>
+          </div>
+          <div class="ticks">
+            <span style="left:0">0</span><span style="left:15%">1,500</span><span style="left:25%">2,500</span><span style="left:50%">5,000</span><span style="left:100%">10,000</span>
+          </div>
+        </div>
+        <div class="legend4" id="legend4">
+          <div class="lg" style="--c:#1F7A52"><b>1단계 분산</b>1,500 미만</div>
+          <div class="lg" style="--c:#A86A0A"><b>2단계 일부 집중</b>1,500 ~ 2,499</div>
+          <div class="lg" style="--c:#C2410C"><b>3단계 집중 높음</b>2,500 ~ 5,000</div>
+          <div class="lg" style="--c:#B42318"><b>4단계 집중 매우 높음</b>5,000 초과</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail">
+      <div class="panel">
+        <h4>뉴스·시사 채널별 시청 비중</h4>
+        <canvas id="channelChart" height="260"></canvas>
+      </div>
+      <div class="panel">
+        <h4>주요 뉴스 출처 (상위 10개)</h4>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>순위</th><th>채널명</th><th>시청</th><th>비중</th></tr></thead>
+          <tbody id="channel-table-body"></tbody>
+        </table></div>
+        <div class="info">HHI·CR3는 뉴스·시사 채널별 시청 횟수의 집중도를 나타냅니다. 채널이 다루는 내용의 다양성, 정치적 편향, 정보의 정확성·신뢰도는 측정하지 않습니다.</div>
+      </div>
+
+    <div class="detail extra-diagnostic">
+      <div class="panel">
+        <h4>뉴스·시사 출처 유형 구성</h4>
+        <div id="source-type-analysis" class="topic-list"></div>
+        <p class="info">등록된 채널 데이터베이스의 매체 유형을 기준으로 집계합니다. 유형이 확인되지 않은 채널은 별도 표시합니다.</p>
+      </div>
+      <div class="panel">
+        <h4>출처 다양성 참고 지표</h4>
+        <div id="diagnosis-detail" class="diagnosis-copy">시청기록을 분석하면 채널 집중도와 출처 유형 구성을 바탕으로 결과를 해석해 드립니다.</div>
+        <div id="recommendation-list" class="recommendation-list"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h4>이전 진단과 비교</h4>
+      <p class="info">이 브라우저에 저장된 직전 진단 결과와 비교합니다. 다른 기기나 브라우저에서는 이전 결과를 불러올 수 없습니다.</p>
+      <div id="comparison-result" class="comparison-result">첫 진단을 완료하면 다음 진단부터 변화 비교가 가능합니다.</div>
+    </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <p><strong>개인정보 처리 안내</strong></p>
+  <p>업로드한 시청기록은 서버에 저장하거나 수집하지 않습니다. 파싱과 HHI·CR3 계산은 모두 이 브라우저 안에서 이루어지며, 분석이 끝나면 데이터는 폐기됩니다.</p>
+  <p style="margin-top:14px">꼬꼬꼬몽 · 소프트웨어융합과 소프트웨어공학 · 2026</p>
+</div></footer>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>시청기록 업로드</h3>
+    <div class="takeout-guide">
+      <strong>Google Takeout에서 시청기록 받는 방법</strong>
+      <ol>
+        <li><a href="https://takeout.google.com" target="_blank" rel="noopener">Google Takeout</a>에 접속해 [모두 선택 해제]를 누릅니다.</li>
+        <li>'YouTube 및 YouTube Music'을 체크하고 [시청 기록]을 선택합니다. <span style="color:var(--muted)">(시청한 영상의 채널 정보가 포함된 기록입니다. 뉴스·시사 채널을 추려 채널별 시청 집중도와 출처 유형 구성을 계산합니다.)</span></li>
+        <li>전송 방식을 '이메일로 다운로드 링크 전송'으로 설정하고 내보내기를 만듭니다.</li>
+      </ol>
+      <div style="margin-top:8px;font-size:12.5px;color:var(--muted)">받은 파일(시청 기록.html 또는 watch-history.json, ZIP)을 그대로 올리면 됩니다.</div>
+    </div>
+    <label class="drop" for="file">
+      <span id="fileText">HTML, JSON 또는 ZIP 파일 선택</span>
+      <input id="file" type="file" onchange="fileSelected(this)">
+    </label>
+    <div id="uploadMsg" role="status" style="display:none;margin-top:10px;padding:10px 12px;border-radius:4px;background:#FCE7E5;color:#B42318;font-size:13.5px;line-height:1.5;white-space:pre-line"></div>
+    <p class="privacy-note">뉴스·시사 채널 시청 기록을 추출해 채널별 집중도와 출처 유형 구성을 분석하고 결과 해석을 제공합니다. 파일은 브라우저에서 처리됩니다.</p>
+    <div class="modal-actions">
+      <button class="btn gray" onclick="closeModal()">취소</button>
+      <button class="btn primary" onclick="analyzeFile()">분석 시작</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let myChart = null;
+if (window.Chart) { Chart.defaults.font.family = '"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif'; Chart.defaults.color = '#4a5361'; }
+const modal = document.getElementById('modal');
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// 📰 뉴스/시사 채널 DB (채널명·별칭 정확 일치 우선) — news_channel_db.json 기반
+const NEWS_DB = [["KBS 뉴스", ["KBS News"], "방송사 뉴스"], ["MBC 뉴스", ["MBCNEWS", "MBC NEWS"], "방송사 뉴스"], ["SBS 뉴스", ["SBS NEWS"], "방송사 뉴스"], ["YTN", ["YTN news"], "방송사 뉴스"], ["연합뉴스TV", ["Yonhapnews TV"], "방송사 뉴스"], ["EBS 뉴스", ["EBS News"], "방송사 뉴스"], ["JTBC News", ["JTBC 뉴스"], "종합편성·보도채널"], ["TV조선", ["TV CHOSUN", "TV CHOSUN - TV조선"], "종합편성·보도채널"], ["채널A 뉴스", ["채널A", "Channel A News"], "종합편성·보도채널"], ["MBN News", ["MBN 뉴스", "MBN"], "종합편성·보도채널"], ["연합뉴스", ["Yonhap News"], "뉴스통신"], ["뉴스1", ["뉴스1TV", "News1"], "뉴스통신"], ["뉴시스", ["NEWSIS"], "뉴스통신"], ["조선일보", ["Chosun Ilbo"], "신문·언론사"], ["중앙일보", ["JoongAng Ilbo"], "신문·언론사"], ["동아일보", ["DongA Ilbo"], "신문·언론사"], ["한겨레", ["한겨레TV", "Hankyoreh"], "신문·언론사"], ["경향신문", ["경향티비"], "신문·언론사"], ["한국일보", ["Hankook Ilbo"], "신문·언론사"], ["서울신문", ["Seoul Shinmun"], "신문·언론사"], ["세계일보", ["Segye Ilbo"], "신문·언론사"], ["국민일보", ["Kukmin Ilbo"], "신문·언론사"], ["문화일보", ["Munhwa Ilbo"], "신문·언론사"], ["한국경제TV", ["한국경제 TV"], "경제 매체"], ["매일경제TV", ["매일경제"], "경제 매체"], ["서울경제", ["서울경제TV"], "경제 매체"], ["머니투데이", ["머니투데이방송", "MTN"], "경제 매체"], ["이데일리", ["이데일리TV", "edaily"], "경제 매체"], ["아시아경제", ["아시아경제TV"], "경제 매체"], ["오마이뉴스", ["오마이TV", "OhmyNews"], "인터넷·탐사 매체"], ["CBS 노컷뉴스", ["노컷뉴스", "CBS NEWS"], "인터넷·탐사 매체"], ["뉴스타파", ["Newstapa"], "인터넷·탐사 매체"], ["시사IN", ["시사인"], "인터넷·탐사 매체"], ["프레시안", ["Pressian"], "인터넷·탐사 매체"], ["미디어오늘", [], "인터넷·탐사 매체"], ["BBC News 코리아", ["BBC News Korea"], "외신(한국어)"], ["삼프로TV", ["3PROTV"], "시사·경제 크리에이터"], ["슈카월드", ["SyukaWorld"], "시사·경제 크리에이터"], ["겸손은힘들다 뉴스공장", ["겸손은힘들다"], "시사·경제 크리에이터"], ["매불쇼", [], "시사·경제 크리에이터"], ["알릴레오", [], "시사·경제 크리에이터"], ["신의한수", ["신의 한수"], "시사·경제 크리에이터"], ["펜앤드마이크", ["PenN Mike"], "시사·경제 크리에이터"], ["가로세로연구소", ["가세연"], "시사·경제 크리에이터"], ["스픽스", ["SPEAKS"], "시사·경제 크리에이터"], ["새날", [], "시사·경제 크리에이터"]];
+
+// 이름 정규화: 소문자 + 공백·기호 제거 (표기 차이 흡수)
+function norm(s){ return (s || '').toLowerCase().replace(/[\s\-_·.,'"()\[\]]/g, ''); }
+const DB_INDEX = new Map();
+NEWS_DB.forEach(([name, aliases, cat]) => {
+  [name, ...aliases].forEach(n => { if (norm(n)) DB_INDEX.set(norm(n), { name, cat }); });
+});
+
+// 보조 키워드 (DB에 없는 채널용). 'TV','중앙','조선','동아' 등 오탐 위험이 큰 단어는 제외
+const NEWS_KEYWORDS = [
+  '뉴스', '시사', '보도', 'NEWS', 'News', '일보', '신문', '특보', '취재',
+  'KBS', 'MBC', 'SBS', 'YTN', 'JTBC', '연합뉴스', 'MBN', '한겨레', '경향', '오마이', '노컷', '매일경제', '한국경제'
+];
+
+// 반환: 'db' | 'keyword' | null
+function matchNewsChannel(channelName) {
+  if (!channelName) return null;
+  if (DB_INDEX.has(norm(channelName))) return 'db';
+  if (NEWS_KEYWORDS.some(kw => channelName.includes(kw))) return 'keyword';
+  return null;
+}
+function isNewsChannel(channelName) { return matchNewsChannel(channelName) !== null; }
+
+function showMsg(t){
+  const el=document.getElementById('uploadMsg');
+  if(el){ el.textContent=t; el.style.display='block'; }
+  openModal();
+}
+function clearMsg(){ const el=document.getElementById('uploadMsg'); if(el){ el.textContent=''; el.style.display='none'; } }
+function openModal(){ modal.classList.add('show'); }
+function closeModal(){ modal.classList.remove('show'); }
+function fileSelected(input){
+  document.getElementById('fileText').textContent = input.files[0]?.name || 'HTML, JSON 또는 ZIP 파일 선택';
+  if (input.files[0]) setTimeout(analyzeFile, 150);
+}
+function goResult(){
+  if (document.body.classList.contains('has-result')) { scrollToSection('result'); return; }
+  if (document.body.classList.contains('has-data')) {
+    document.body.classList.add('has-result');
+    window.scrollTo(0, 0);
+    return;
+  }
+  openModal();
+}
+function goHome(e){
+  if (e && e.preventDefault) e.preventDefault();
+  closeModal();
+  // 결과 데이터는 그대로 두고 화면만 인트로로 돌아간다 (내 결과 메뉴에서 다시 열 수 있음)
+  document.body.classList.remove('has-result');
+  window.scrollTo(0, 0);
+}
+function syncNav(){
+  const r = document.body.classList.contains('has-result');
+  const h = document.getElementById('nav-home'), v = document.getElementById('nav-result');
+  if (!h || !v) return;
+  h.classList.toggle('active', !r); v.classList.toggle('active', r);
+  if (r) { v.setAttribute('aria-current','page'); h.removeAttribute('aria-current'); }
+  else { h.setAttribute('aria-current','page'); v.removeAttribute('aria-current'); }
+}
+new MutationObserver(syncNav).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+syncNav();
+
+// 1. 통합 파일 분석 엔진
+function analyzeFile() {
+  const fileInput = document.getElementById('file');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    showMsg('분석할 파일(.html, .json, .zip)을 선택해 주세요!');
+    return;
+  }
+
+  clearMsg();
+  let fileName = file.name.toLowerCase();
+
+  if (!/\.(zip|html?|json)$/.test(fileName)) {
+    file.slice(0, 4).arrayBuffer().then(function(buf){
+      const b = new Uint8Array(buf);
+      const kind = (b[0]===0x50 && b[1]===0x4B) ? 'zip' : (b[0]===0x5B || b[0]===0x7B) ? 'json' : 'html';
+      runAnalysis(file, kind);
+    }).catch(function(){ showMsg('파일을 읽지 못했습니다. 다시 선택해 주세요.'); });
+    return;
+  }
+  runAnalysis(file, fileName.endsWith('.zip') ? 'zip' : fileName.endsWith('.json') ? 'json' : 'html');
+}
+
+function runAnalysis(file, kind) {
+  const fileName = '.' + kind;
+
+  if (fileName.endsWith('.zip')) {
+    if (typeof JSZip === 'undefined') {
+      showMsg('압축 해제 도구를 불러오지 못했습니다. 인터넷 연결을 확인하거나, ZIP을 풀어서 시청 기록 파일(.html/.json)만 올려 주세요.');
+      return;
+    }
+    JSZip.loadAsync(file).then(function(zip) {
+      let targetEntry = null;
+      let isHtml = false;
+
+      zip.forEach(function (relativePath, zipEntry) {
+        const lowerPath = relativePath.toLowerCase();
+        if (lowerPath.endsWith('watch-history.json') || lowerPath.endsWith('시청 기록.json')) {
+          targetEntry = zipEntry;
+          isHtml = false;
+        } else if (!targetEntry && (lowerPath.endsWith('watch-history.html') || lowerPath.endsWith('시청 기록.html') || lowerPath.endsWith('.html'))) {
+          targetEntry = zipEntry;
+          isHtml = true;
+        }
+      });
+
+      if (!targetEntry) {
+        showMsg('ZIP 파일 내에서 시청 기록 파일(.html 또는 .json)을 찾을 수 없습니다.');
+        return;
+      }
+
+      targetEntry.async("string").then(function(content) {
+        try {
+          const jsonArr = isHtml ? parseHTMLHistory(content) : JSON.parse(content);
+          if (processData(jsonArr) !== false) closeModal();
+        } catch (err) {
+          showMsg('압축 파일 데이터를 해석하는 도중 오류가 발생했습니다.');
+        }
+      });
+    }).catch(function() {
+      showMsg('ZIP 파일을 열지 못했습니다. 파일이 손상되었거나 너무 클 수 있어요. ZIP을 풀어서 시청 기록 파일(.html/.json)만 올려 보세요.');
+    });
+  }
+  else if (fileName.endsWith('.html') || fileName.endsWith('.htm')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const jsonArr = parseHTMLHistory(e.target.result);
+        if (processData(jsonArr) !== false) closeModal();
+      } catch (err) {
+        showMsg('HTML 시청 기록을 읽는 중 오류가 발생했습니다.');
+      }
+    };
+    reader.onerror = function(){ showMsg('파일을 읽지 못했습니다. 다시 선택해 주세요.'); };
+    reader.readAsText(file);
+  }
+  else if (fileName.endsWith('.json')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const jsonArr = JSON.parse(e.target.result);
+        if (processData(jsonArr) !== false) closeModal();
+      } catch (err) {
+        showMsg('올바른 JSON 시청 기록 파일이 아닙니다.');
+      }
+    };
+    reader.readAsText(file);
+  }
+}
+
+// 2. HTML 전용 파서: 영상 제목과 채널명을 모두 보존
+function parseHTMLHistory(htmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlText, 'text/html');
+  const cells = doc.querySelectorAll('.content-cell, .mdl-cell');
+  const historyArr = [];
+
+  if (cells.length > 0) {
+    cells.forEach(cell => {
+      const aTags = cell.querySelectorAll('a');
+      if (aTags.length >= 2) {
+        const videoTitle = aTags[0].textContent.trim();
+        const channelName = aTags[1].textContent.trim();
+        if (videoTitle || channelName) {
+          historyArr.push({ title: videoTitle, channelTitle: channelName, subtitles: channelName ? [{ name: channelName }] : [] });
+        }
+      } else if (aTags.length === 1) {
+        const link = aTags[0];
+        const href = link.getAttribute('href') || '';
+        const text = link.textContent.trim();
+        if (href.includes('/channel/') || href.includes('/c/') || href.includes('/@')) {
+          historyArr.push({ title: '', channelTitle: text, subtitles: [{ name: text }] });
+        } else if (href.includes('watch') || href.includes('youtu.be')) {
+          historyArr.push({ title: text, channelTitle: '', subtitles: [] });
+        }
+      }
+    });
+  } else {
+    const allLinks = doc.querySelectorAll('a');
+    allLinks.forEach(a => {
+      const href = a.getAttribute('href') || '';
+      if (href.includes('youtube.com/channel/') || href.includes('youtube.com/@') || href.includes('youtube.com/c/')) {
+        historyArr.push({ subtitles: [{ name: a.textContent.trim() }] });
+      }
+    });
+  }
+  return historyArr;
+}
+
+// 3. 샘플 데이터 로드 (뉴스·시사 정보 소비 및 뉴스 편중도 예시)
+function loadSampleData() {
+  const sampleArr = [
+    ...Array(40).fill({subtitles: [{name: 'KBS 뉴스'}]}),
+    ...Array(35).fill({subtitles: [{name: 'MBC 뉴스'}]}),
+    ...Array(15).fill({subtitles: [{name: 'YTN'}]}),
+    ...Array(5).fill({subtitles: [{name: '침착맨'}]}), // 뉴스 아님 (자동 제거됨)
+    ...Array(5).fill({subtitles: [{name: 'LOL 하이라이트'}]}), // 뉴스 아님 (자동 제거됨)
+  ];
+  processData(sampleArr);
+}
+
+// 등급 정의 (색상은 텍스트·단계와 함께 표시)
+const GRADES = [
+  { lv: '1단계', name: '분산된 이용', desc: '뉴스·시사 시청이 여러 채널에 비교적 분산되어 있습니다.',          color: '#1F7A52', soft: '#E6F4EC' },
+  { lv: '2단계', name: '일부 채널 집중', desc: '상위 채널의 시청 비중이 상대적으로 높게 나타납니다.',            color: '#A86A0A', soft: '#FBF1DD' },
+  { lv: '3단계', name: '채널 집중 높음', desc: '뉴스·시사 시청이 소수 채널에 많이 모여 있습니다.',                  color: '#C2410C', soft: '#FDEBDD' },
+  { lv: '4단계', name: '채널 집중 매우 높음', desc: '뉴스·시사 시청의 대부분이 소수 채널에 모여 있습니다.', color: '#B42318', soft: '#FCE7E5' }
+];
+function gradeIndex(hhi){ return hhi < 1500 ? 0 : hhi < 2500 ? 1 : hhi <= 5000 ? 2 : 3; }
+
+// 숫자 카운트업
+function animateNumber(el, to, dur, format) {
+  format = format || (v => Math.round(v).toLocaleString());
+  if (reduceMotion) { el.textContent = format(to); return; }
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min((now - start) / dur, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = format(to * eased);
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// 4. 뉴스·시사 전용 HHI 및 CR3 정량 연산 엔진
+function processData(historyArr) {
+  const newsCounts = {};
+  const sourceTypeCounts = {};
+  const channelNames = new Set();
+  let totalRawCount = historyArr.length;
+  let totalNewsCount = 0, dbMatched = 0, keywordMatched = 0;
+
+  historyArr.forEach(item => {
+    const channelName = item.subtitles?.[0]?.name || item.channelTitle || '';
+    const matchType = matchNewsChannel(channelName);
+    if (!matchType) return;
+
+    const dbEntry = matchType === 'db' ? DB_INDEX.get(norm(channelName)) : null;
+    const key = dbEntry ? dbEntry.name : channelName;
+    const sourceType = dbEntry ? dbEntry.cat : '유형 미확인 채널';
+    newsCounts[key] = (newsCounts[key] || 0) + 1;
+    sourceTypeCounts[sourceType] = (sourceTypeCounts[sourceType] || 0) + 1;
+    channelNames.add(key);
+    totalNewsCount++;
+    if (matchType === 'db') dbMatched++; else keywordMatched++;
+  });
+
+  if (totalNewsCount === 0) {
+    showMsg(`전체 시청 기록 ${totalRawCount}개 중 인식된 뉴스·시사 채널이 없습니다.\n뉴스·시사 채널의 시청 기록이 포함되어 있는지 확인해 주세요.`);
+    return false;
+  }
+
+  const sortedChannels = Object.entries(newsCounts)
+    .map(([name, count]) => ({ name, count, share: count / totalNewsCount * 100 }))
+    .sort((a, b) => b.count - a.count);
+
+  let hhi = 0;
+  sortedChannels.forEach(ch => { hhi += Math.pow(ch.share, 2); });
+  hhi = Math.round(hhi);
+  const cr3 = sortedChannels.slice(0, 3).reduce((sum, ch) => sum + ch.share, 0);
+  const uniqueSources = sortedChannels.length;
+  const topSource = sortedChannels[0];
+  const gi = gradeIndex(hhi);
+  const G = GRADES[gi];
+
+  document.body.classList.add('has-result', 'has-data');
+  const root = document.documentElement;
+  root.style.setProperty('--g', G.color);
+  root.style.setProperty('--gsoft', G.soft);
+
+  document.getElementById('analysis-date').textContent = `${new Date().toLocaleDateString()} 분석 완료`;
+  document.getElementById('grade-lv').textContent = G.lv;
+  document.getElementById('grade-name').textContent = G.name;
+  document.getElementById('status-desc').textContent = G.desc;
+  document.getElementById('news-count').textContent = totalNewsCount.toLocaleString();
+  document.getElementById('total-filtered-sub').textContent =
+    `전체 ${totalRawCount.toLocaleString()}개 중 추출 (DB 일치 ${dbMatched} · 채널명 규칙 일치 ${keywordMatched})`;
+  document.getElementById('gauge-note').textContent = `${G.lv} · ${G.name}`;
+  renderSummary({ total: totalNewsCount, raw: totalRawCount, db: dbMatched, kw: keywordMatched,
+    hhi, cr3, G, top: topSource, channels: uniqueSources });
+
+  const typeEl = document.getElementById('source-type-analysis');
+  if (typeEl) {
+    const sortedTypes = Object.entries(sourceTypeCounts).sort((a,b)=>b[1]-a[1]);
+    typeEl.innerHTML = sortedTypes.map(([name,count]) => {
+      const pct = count / totalNewsCount * 100;
+      return `<div class="topic-row"><div><b>${name}</b><span>${count.toLocaleString()}회 · ${pct.toFixed(1)}%</span></div><div class="topic-track"><i style="width:${pct}%"></i></div></div>`;
+    }).join('');
+  }
+
+  // 측정값을 사용자가 이해할 수 있는 진단 문장과 실천 가능한 확인 항목으로 설명합니다.
+  const sortedTypes = Object.entries(sourceTypeCounts).sort((a,b)=>b[1]-a[1]);
+  const topThreeShare = cr3;
+  const topShare = topSource.share;
+  const diagnosisEl = document.getElementById('diagnosis-detail');
+  if (diagnosisEl) {
+    const typeLead = sortedTypes[0];
+    const typePct = typeLead ? (typeLead[1] / totalNewsCount * 100) : 0;
+    let concentrationText = '';
+    if (gi === 0) concentrationText = `특정 채널에 시청이 크게 쏠리지는 않았어요. 가장 많이 본 채널은 ${topSource.name}이며, 전체 뉴스·시사 시청의 ${topShare.toFixed(1)}%를 차지합니다.`;
+    else if (gi === 1) concentrationText = `일부 채널의 비중이 상대적으로 높아요. ${topSource.name} 한 곳의 비중은 ${topShare.toFixed(1)}%이고, 상위 3개 채널을 합치면 ${topThreeShare.toFixed(1)}%입니다.`;
+    else if (gi === 2) concentrationText = `시청이 몇몇 채널에 비교적 많이 모여 있어요. ${topSource.name}이 ${topShare.toFixed(1)}%를 차지하고, 상위 3개 채널의 비중은 ${topThreeShare.toFixed(1)}%입니다.`;
+    else concentrationText = `시청이 소수 채널에 상당히 집중되어 있어요. ${topSource.name}이 ${topShare.toFixed(1)}%를 차지하며, 상위 3개 채널의 비중은 ${topThreeShare.toFixed(1)}%입니다.`;
+    const typeText = typeLead
+      ? `출처 유형 중에서는 ‘${typeLead[0]}’이 ${typePct.toFixed(1)}%로 가장 큰 비중을 차지합니다.`
+      : '출처 유형을 확인할 수 있는 채널이 없습니다.';
+    diagnosisEl.innerHTML = `<strong class="diagnosis-title">${G.name}</strong><p>${concentrationText}</p><p>${typeText}</p><p>이 결과는 채널별 시청 횟수의 분포를 설명합니다. 영상 내용의 다양성이나 정치적 성향, 정보의 정확성까지 판단하는 결과는 아닙니다.</p>`;
+  }
+
+  const recommendationEl = document.getElementById('recommendation-list');
+  if (recommendationEl) {
+    const tips = [];
+    if (gi >= 2) tips.push('최근에 자주 본 채널 외에 다른 뉴스·시사 출처도 있는지 시청기록에서 확인해 보세요.');
+    else tips.push('현재 여러 채널을 이용하고 있어요. 이용 채널이 실제로 서로 다른 관점과 취재를 제공하는지는 영상별로 살펴보세요.');
+    if (sortedTypes.length > 1) tips.push(`현재 기록에서 확인된 출처 유형은 ${sortedTypes.length}가지입니다. 비중이 낮은 유형의 매체도 필요할 때 비교해 볼 수 있어요.`);
+    else tips.push('출처 유형이 한 가지로만 확인됐어요. 다른 유형의 매체를 이용하고 있는지, 채널 분류 데이터에 누락이 있는지 함께 확인해 보세요.');
+    tips.push('뉴스를 비교할 때는 같은 사건을 다룬 복수의 보도와 원문 자료를 함께 확인하는 것이 좋습니다.');
+    recommendationEl.innerHTML = '<h5>다음 시청에서 확인해 볼 점</h5>' + tips.map((tip,i)=>`<div class="recommendation-item"><b>${i+1}.</b> ${tip}</div>`).join('');
+  }
+
+  const current = {
+    date:new Date().toISOString(), hhi, cr3, channels:uniqueSources,
+    channelNames:[...channelNames], sourceTypes:sourceTypeCounts
+  };
+  let previous = null;
+  try { previous = JSON.parse(localStorage.getItem('infoDietPrevious') || 'null'); } catch(e) {}
+  const compareEl = document.getElementById('comparison-result');
+  if (compareEl) {
+    if (previous) {
+      const oldNames = new Set(previous.channelNames || []);
+      const newNames = [...channelNames].filter(name => !oldNames.has(name));
+      const diff = hhi - Number(previous.hhi || 0);
+      compareEl.innerHTML =
+        `<b>직전 진단 (${new Date(previous.date).toLocaleDateString()}) 대비</b>` +
+        `<p>HHI ${diff===0?'변화 없음':(diff<0?Math.abs(diff)+'점 감소':diff+'점 증가')} · 이전 ${Number(previous.hhi||0).toLocaleString()} → 현재 ${hhi.toLocaleString()}</p>` +
+        `<p>분석 채널 수 ${previous.channels||0}개 → ${uniqueSources}개</p>` +
+        `<p>이번 기록에서 새롭게 확인된 채널 ${newNames.length}개</p>` +
+        (newNames.length ? `<p>${newNames.slice(0,5).join(' · ')}${newNames.length>5?' 외':''}</p>` : '');
+    } else {
+      compareEl.textContent = '첫 진단 결과입니다. 다음 진단부터 이전 기록과 비교해 새롭게 확인된 채널 수를 보여줍니다.';
+    }
+  }
+  try { localStorage.setItem('infoDietPrevious', JSON.stringify(current)); } catch(e) {}
+
+  animateNumber(document.getElementById('hhi-score'), hhi, 1000);
+  animateNumber(document.getElementById('cr3-score'), cr3, 900, v => v.toFixed(1));
+  const cr3Fill = document.getElementById('cr3-bar-fill');
+  cr3Fill.style.width = '0%';
+  requestAnimationFrame(() => requestAnimationFrame(() => { cr3Fill.style.width = `${Math.min(cr3, 100)}%`; }));
+
+  [...document.querySelectorAll('#track i')].forEach((el, i) => el.classList.toggle('on', i === gi));
+  [...document.querySelectorAll('#legend4 .lg')].forEach((el, i) => el.classList.toggle('on', i === gi));
+  const pct = Math.min(Math.max(hhi / 100, 0), 100);
+  const pin = document.getElementById('pin');
+  const bubble = document.getElementById('pin-bubble');
+  bubble.textContent = `HHI ${hhi.toLocaleString()}`;
+  pin.classList.toggle('edge-l', pct < 10);
+  pin.classList.toggle('edge-r', pct > 90);
+  pin.style.transition = 'none'; pin.style.left = '0%'; void pin.offsetWidth;
+  pin.style.transition = '';
+  requestAnimationFrame(() => { pin.style.left = `${pct}%`; });
+
+  const tbody = document.getElementById('channel-table-body');
+  tbody.innerHTML = '';
+  sortedChannels.slice(0, 10).forEach((ch, idx) => {
+    const tr = document.createElement('tr');
+    if (idx === 0) tr.className = 'top1';
+    const tdRank = document.createElement('td'); tdRank.className = 'rank';
+    tdRank.textContent = String(idx + 1).padStart(2, '0');
+    const tdName = document.createElement('td'); tdName.textContent = ch.name;
+    const tdCount = document.createElement('td'); tdCount.textContent = `${ch.count}회`;
+    const tdShare = document.createElement('td');
+    const wrap = document.createElement('div'); wrap.className = 'share-cell';
+    const sb = document.createElement('div'); sb.className = 'sb';
+    const bar = document.createElement('i'); bar.style.width = `${ch.share.toFixed(1)}%`;
+    sb.appendChild(bar);
+    const label = document.createElement('span'); label.textContent = `${ch.share.toFixed(1)}%`;
+    wrap.append(sb,label); tdShare.appendChild(wrap);
+    tr.append(tdRank,tdName,tdCount,tdShare); tbody.appendChild(tr);
+  });
+
+  updateChart(sortedChannels);
+  setTimeout(() => window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }), 50);
+}
+
+function updateChart(channels) {
+  if (!window.Chart) return;
+  const ctx = document.getElementById('channelChart').getContext('2d');
+  const topChannels = channels.slice(0, 4);
+  const otherShare = channels.slice(4).reduce((sum, ch) => sum + ch.share, 0);
+
+  const labels = topChannels.map(c => `${c.name} ${c.share.toFixed(1)}%`);
+  const data = topChannels.map(c => c.share);
+
+  if (otherShare > 0) {
+    labels.push(`기타 시사 채널 ${otherShare.toFixed(1)}%`);
+    data.push(otherShare);
+  }
+
+  if (myChart) myChart.destroy();
+
+  myChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: ['#0B1F3A', '#2F6FEB', '#7FA6E8', '#B9CBE6', '#DDE3EC'],
+        borderColor: '#ffffff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10, padding: 14 } },
+        tooltip: { callbacks: { label: c => ` ${c.parsed.toFixed(1)}%` } }
+      },
+      cutout: '62%'
+    }
+  });
+}
+
+function scrollToSection(id){
+  let el = document.getElementById(id);
+  // 결과 전에는 #result가 숨겨져 있으므로 진단 요약으로 이동
+  if (!el || el.offsetParent === null) el = document.getElementById('summary');
+  if (el) el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+
+// ── 진단 요약 + 홈 안내 영역 ──
+const GRADE_RANGES = ['1,500 미만', '1,500 ~ 2,499', '2,500 ~ 5,000', '5,000 초과'];
+
+function initHomeSections(){
+  if (document.getElementById('summary')) return;
+  const result = document.getElementById('result');
+  const parent = result ? result.parentNode : (document.querySelector('footer') || document.body).parentNode;
+  const anchor = result || document.querySelector('footer') || null;
+  // 부모에 이미 .wrap 이 있으면 중복 패딩을 피한다
+  const wrapCls = (parent && parent.closest && parent.closest('.wrap')) ? '' : ' wrap';
+
+  const summary = document.createElement('section');
+  summary.id = 'summary';
+  summary.className = 'sum' + wrapCls;
+  summary.innerHTML =
+    '<div class="sum-head"><h2>진단 요약</h2><span id="sum-date">파일을 업로드하세요</span></div>' +
+    '<p class="sum-line" id="sum-line">시청기록에서 뉴스·시사 채널을 추출해 채널별 시청 집중도와 출처 유형 구성을 계산합니다.</p>' +
+    '<div class="sum-grid">' +
+      '<div class="sum-card"><div class="sum-k">추출된 뉴스·시사 영상</div><div class="sum-v" id="sum-count">–</div><div class="sum-s" id="sum-count-sub">전체 시청 기록 중 뉴스 필터링</div></div>' +
+      '<div class="sum-card hl"><div class="sum-k">HHI 채널 집중도 지수</div><div class="sum-v" id="sum-hhi">–</div><div class="sum-s" id="sum-hhi-sub">분석 대기 중</div></div>' +
+      '<div class="sum-card"><div class="sum-k">상위 3개 채널 비중(CR3)</div><div class="sum-v" id="sum-cr3">–</div><div class="sum-s" id="sum-cr3-sub">뉴스 채널 중 상위 점유율</div></div>' +
+      '<div class="sum-card"><div class="sum-k">최다 시청 채널</div><div class="sum-v txt" id="sum-top">–</div><div class="sum-s" id="sum-top-sub">분석 후 표시</div></div>' +
+    '</div>';
+
+  const guide = document.createElement('section');
+  guide.id = 'home-guide';
+  guide.className = 'guide' + wrapCls;
+  const steps = [
+    ['01', '업로드', 'HTML·JSON·ZIP 시청기록'],
+    ['02', '파싱', '시청기록에서 채널명 추출'],
+    ['03', '뉴스·시사 채널 추출', '등록 채널 DB 및 채널명 확인 규칙'],
+    ['04', '출처 분포 확인', 'HHI·CR3 및 매체 유형 구성']
+  ];
+  guide.innerHTML =
+    '<div class="guide-head"><h2>진단은 이렇게 진행됩니다</h2><span>뉴스·시사 출처 집중도 및 유형 구성</span></div>' +
+    '<div class="steps">' + steps.map(s => '<div class="step"><i>STEP ' + s[0] + '</i><b>' + s[1] + '</b><span>' + s[2] + '</span></div>').join('') + '</div>' +
+    '<div class="guide-head"><h2>HHI 4단계 기준</h2><span>한 채널이 100%이면 최대 10,000점</span></div>' +
+    '<div class="gcards">' + GRADES.map((g, i) => '<div class="gcard" style="--c:' + g.color + '"><small>' + g.lv + '</small><b>' + g.name + '</b><em>HHI ' + GRADE_RANGES[i] + '</em><span>' + g.desc + '</span></div>').join('') + '</div>';
+
+  // 진단 요약과 상세 리포트는 분리하고, 상세 리포트 + 핵심 지표는 하나의 그룹으로 묶습니다.
+  const metricGrid = summary.querySelector('.sum-grid');
+  if (metricGrid) metricGrid.remove();
+
+  if (parent) {
+    parent.insertBefore(summary, anchor);
+
+    const reportGroup = document.createElement('section');
+    reportGroup.id = 'news-report-group';
+    reportGroup.className = 'news-report-group';
+    reportGroup.setAttribute('aria-label', '뉴스·시사 출처 분석 리포트');
+
+    if (result) {
+      parent.insertBefore(reportGroup, result);
+      reportGroup.appendChild(result);
+    } else {
+      parent.insertBefore(reportGroup, anchor);
+    }
+
+    if (metricGrid) reportGroup.appendChild(metricGrid);
+    reportGroup.insertAdjacentElement('afterend', guide);
+  } else {
+    document.body.appendChild(summary);
+    const reportGroup = document.createElement('section');
+    reportGroup.id = 'news-report-group';
+    reportGroup.className = 'news-report-group';
+    if (result) reportGroup.appendChild(result);
+    if (metricGrid) reportGroup.appendChild(metricGrid);
+    document.body.appendChild(reportGroup);
+    document.body.appendChild(guide);
+  }
+}
+
+function renderSummary(o){
+  const $ = id => document.getElementById(id);
+  const topShare = o.top.share.toFixed(1);
+  $('sum-date').textContent = `${new Date().toLocaleDateString()} 분석 완료`;
+  animateNumber($('sum-count'), o.total, 800, v => Math.round(v).toLocaleString() + '개');
+  $('sum-count-sub').textContent = `전체 ${o.raw.toLocaleString()}개 중 뉴스·시사 채널 추출`;
+  animateNumber($('sum-hhi'), o.hhi, 1000);
+  $('sum-hhi-sub').textContent = `${o.G.lv} · ${o.G.name}`;
+  animateNumber($('sum-cr3'), o.cr3, 900, v => v.toFixed(1) + '%');
+  $('sum-cr3-sub').textContent = `인식된 채널 ${o.channels}개 중 상위 3개`;
+  $('sum-top').textContent = o.top.name;
+  $('sum-top-sub').textContent = `${o.top.count}회 · ${topShare}%`;
+  $('sum-line').textContent =
+    `뉴스·시사 영상 ${o.total.toLocaleString()}개 중 상위 3개 채널의 시청 비중은 ${o.cr3.toFixed(1)}%이며, 가장 많이 본 채널은 ${o.top.name}(${topShare}%)입니다. HHI는 ${o.hhi.toLocaleString()}입니다. 이 수치는 채널별 시청 집중도만 나타냅니다.`;
+}
+
+initHomeSections();
+
+
+// ================= [여기서부터 공유 기능 코드 추가] =================
+
+// 카카오 SDK 초기화 (주의: 카카오 디벨로퍼스에서 발급받은 본인의 JavaScript 키를 넣어야 동작합니다)
+if (window.Kakao && !Kakao.isInitialized()) {
+  Kakao.init('여기에_카카오_JavaScript_앱키를_넣으세요'); 
+}
+
+// 1. 이미지 캡처/저장 기능
+async function captureReport() {
+  if (!window.html2canvas) {
+    alert('이미지 저장 기능을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');
+    return;
+  }
+  const get = id => document.getElementById(id)?.textContent?.trim() || '—';
+  const exportRoot = document.createElement('div');
+  exportRoot.style.cssText = 'position:fixed;left:-20000px;top:0;width:1400px;background:#f3f6f7;padding:64px;box-sizing:border-box;z-index:-1;font-family:Pretendard,"Noto Sans KR","Malgun Gothic",sans-serif;color:#172b3a;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border:1px solid #dce5e9;border-radius:20px;padding:54px 58px;box-sizing:border-box;width:100%;';
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #dce5e9;padding-bottom:28px;margin-bottom:36px;';
+  const heading = document.createElement('div');
+  heading.innerHTML = '<div style="font-size:36px;font-weight:800;letter-spacing:-1.5px">나의 뉴스·시사 출처 분석 리포트</div><div style="font-size:17px;color:#71838b;margin-top:10px">'+get('analysis-date')+'</div>';
+  const logo = document.createElement('div');
+  logo.textContent = 'SOURCE DIVERSITY';
+  logo.style.cssText = 'font-size:17px;font-weight:800;letter-spacing:2px;color:#286b70;';
+  header.append(heading,logo);
+
+  const top = document.createElement('div');
+  top.style.cssText = 'display:grid;grid-template-columns:1.2fr 1fr;gap:36px;padding:34px;background:#eaf3f2;border-radius:14px;';
+  const left = document.createElement('div');
+  left.innerHTML = '<div style="font-size:17px;color:#55717a;font-weight:700">채널별 시청 집중도 · HHI</div>';
+  const grade = document.createElement('div');
+  grade.textContent = get('grade-lv')+' · '+get('grade-name');
+  grade.style.cssText = 'font-size:23px;font-weight:800;color:#205e68;margin-top:18px;';
+  const score = document.createElement('div');
+  score.textContent = get('hhi-score');
+  score.style.cssText = 'font-size:100px;line-height:1.15;font-weight:850;letter-spacing:-4px;color:#205e68;margin-top:16px;';
+  const desc = document.createElement('div');
+  desc.textContent = get('status-desc');
+  desc.style.cssText = 'font-size:20px;font-weight:700;line-height:1.6;margin-top:10px;';
+  left.append(grade,score,desc);
+
+  const right = document.createElement('div');
+  right.style.cssText = 'display:flex;flex-direction:column;justify-content:center;gap:36px;padding:12px 10px;';
+  const metric = (label,value,suffix) => {
+    const box=document.createElement('div');
+    const l=document.createElement('div');l.textContent=label;l.style.cssText='font-size:17px;color:#71838b;margin-bottom:8px;';
+    const v=document.createElement('div');v.textContent=value+suffix;v.style.cssText='font-size:54px;font-weight:850;letter-spacing:-2px;color:#173d4b;';
+    box.append(l,v);return box;
+  };
+  right.append(metric('상위 3개 채널 시청 비중 · CR3',get('cr3-score'),'%'),
+               metric('분석된 뉴스·시사 영상',get('news-count'),'개'));
+  top.append(left,right);
+
+  const sourcePanel=document.createElement('div');
+  sourcePanel.style.cssText='margin-top:34px;padding:30px 34px;border:1px solid #e1e9eb;border-radius:14px;';
+  const sourceTitle=document.createElement('div');
+  sourceTitle.textContent='뉴스·시사 출처 유형 구성';
+  sourceTitle.style.cssText='font-size:23px;font-weight:800;margin-bottom:22px;';
+  sourcePanel.append(sourceTitle);
+  const sourceRows=[...document.querySelectorAll('#source-type-analysis .topic-row')];
+  sourceRows.forEach(row=>{
+    const clone=row.cloneNode(true);
+    clone.style.cssText='margin:16px 0;font-size:17px;';
+    const bar=clone.querySelector('.topic-track');
+    if(bar) bar.style.height='13px';
+    sourcePanel.append(clone);
+  });
+  if(!sourceRows.length){
+    const empty=document.createElement('p');empty.textContent='출처 유형 데이터가 없습니다.';sourcePanel.append(empty);
+  }
+
+  const disclaimer=document.createElement('div');
+  disclaimer.textContent='측정 범위: 뉴스·시사 채널별 시청 횟수와 채널 유형. 영상 내용의 다양성, 정치적 편향, 정보의 정확성·신뢰도는 측정하지 않습니다.';
+  disclaimer.style.cssText='margin-top:26px;padding-top:22px;border-top:1px solid #e1e9eb;font-size:15px;line-height:1.8;color:#71838b;';
+  panel.append(header,top,sourcePanel,disclaimer);
+  exportRoot.append(panel);
+  document.body.append(exportRoot);
+
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const canvas=await html2canvas(exportRoot,{
+      scale:3, backgroundColor:'#f3f6f7', useCORS:true,
+      width:1400, windowWidth:1400, logging:false,
+      onclone: clonedDoc=>{
+        clonedDoc.querySelectorAll('*').forEach(el=>{
+          el.style.animation='none';
+          el.style.transition='none';
+          el.style.transform='none';
+        });
+      }
+    });
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+    if(!blob) throw new Error('이미지 변환 실패');
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.download='뉴스시사_출처다양성_리포트.png';
+    link.href=url;link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  } catch(err) {
+    console.error(err);
+    alert('이미지 저장에 실패했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.');
+  } finally {
+    exportRoot.remove();
+  }
+}
+
+// 2. 카카오톡 공유 기능
+function shareKakao() {
+  if (!window.Kakao || !Kakao.isInitialized()) {
+    alert("카카오 공유 기능이 설정되지 않았습니다. 코드 맨 아래 '여기에_카카오_JavaScript_앱키를_넣으세요' 부분에 실제 앱키를 넣어주세요.");
+    return;
+  }
+  
+  Kakao.Share.sendDefault({
+    objectType: 'feed',
+    content: {
+      title: '정보편식 진단기',
+      description: '나의 뉴스·시사 채널별 시청 출처 분포를 확인해보세요!',
+      // 공유창에 뜰 썸네일 이미지 주소 (추후 실제 로고 URL로 변경)
+      imageUrl: 'https://cdn-icons-png.flaticon.com/512/1041/1041180.png',
+      link: {
+        mobileWebUrl: window.location.href,
+        webUrl: window.location.href,
+      },
+    },
+    buttons: [
+      {
+        title: '내 진단 결과 보러가기',
+        link: {
+          mobileWebUrl: window.location.href,
+          webUrl: window.location.href,
+        },
+      },
+    ],
+  });
+}
+
+// 3. URL 링크 복사 기능
+function copyUrl() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    alert("URL이 복사되었습니다. 원하는 곳에 붙여넣기 해주세요!");
+  }).catch(err => {
+    alert("URL 복사에 실패했습니다. 주소창의 URL을 직접 복사해주세요.");
+  });
+}
+// ================= [여기까지 추가] =================
+
+</script>
+</body>
+</html>
+<div class="band">
+  <header><div class="wrap topbar">
+    <a class="logo" href="./index.html" onclick="goHome(event)" aria-label="정보편식 진단기 홈으로">
+      <svg class="logo-mark" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" focusable="false">
+        <rect width="32" height="32" rx="8" fill="#13305a"/>
+        <rect x="6" y="19" width="5" height="7" rx="1.5" fill="#8fb2f0"/>
+        <rect x="13.5" y="15" width="5" height="11" rx="1.5" fill="#8fb2f0"/>
+        <rect x="21" y="6" width="5" height="20" rx="1.5" fill="#fff"/>
+      </svg>
+      <img class="logo-img" id="logo-img" alt="" hidden>
+      <span>정보편식 진단기</span>
+    </a>
+    <nav class="nav">
+      <button id="nav-home" class="active" onclick="goHome()">홈</button>
+      <button id="nav-start" onclick="startDiagnosis()">진단하기</button>
+      <button id="nav-result" onclick="goResult()">진단 결과</button>
+      <button onclick="location.href='./history.html'">진단 이력</button>
+    </nav>
+  </div></header>
+  <div class="wrap">
+    <section class="intro">
+      <p class="eyebrow">YouTube 시청기록 기반 · 뉴스·시사 정보 소스 진단</p>
+      <h1>내 뉴스 시청은<br>어느 채널에 쏠려 있을까</h1>
+      <p class="lead">Google Takeout 시청기록에서 뉴스·시사 채널만 골라 HHI와 CR3로 계산합니다. 음악·예능·게임 등은 분석에서 제외됩니다.</p>
+      <div class="actions">
+        <button class="btn-main" onclick="startDiagnosis()">시청기록 업로드</button>
+        <a href="https://takeout.google.com" target="_blank" rel="noopener" class="btn-line">Google Takeout 열기</a>
+        <button class="btn-line resume" onclick="goResult()">방금 분석한 결과 보기</button>
+        <button class="btn-text" onclick="loadSampleData()">예시 데이터로 먼저 보기</button>
+      </div>
+    </section>
+    <div class="assure">
+      <div><b>서버에 저장하지 않음</b>시청기록은 브라우저 안에서만 처리</div>
+      <div><b>판단 없이 수치만</b>정치 성향·채널 평가 없이 HHI·CR3 제공</div>
+      <div><b>분석 후 즉시 폐기</b>업로드한 파일은 결과 계산 뒤 삭제</div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <!-- 진단 결과 (분석 후 화면 최상단에 크게 표시) -->
+  <section id="result" aria-live="polite">
+    <div class="result-bar">
+      <div>
+        <h2>내 뉴스 소비 진단 결과</h2>
+        <span class="meta" id="analysis-date"></span>
+      </div>
+      <div class="result-actions">
+        <button class="chip-btn" onclick="loadSampleData()">예시 데이터</button>
+        <button class="chip-btn" id="save-btn" onclick="saveCurrentResult()">결과 저장</button>
+        <button class="chip-btn dark" onclick="startDiagnosis()">다시 진단하기</button>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-top">
+        <div class="v-main">
+          <p class="v-label">나의 정보 편식 등급</p>
+          <div class="grade-badge"><span class="lv" id="grade-lv">3단계</span><span id="grade-name">고도 편중</span></div>
+          <div class="v-score"><span class="num" id="hhi-score">0</span><span class="den">/ 10,000점</span></div>
+          <p class="v-name">HHI 편중도 지수 · 채널별 시청 점유율(%)의 제곱합</p>
+          <p class="v-desc" id="status-desc">파일을 업로드하면 결과가 표시됩니다.</p>
+        </div>
+        <div class="v-side">
+          <div>
+            <p class="stat-label">CR3 · 상위 3개 채널 비중</p>
+            <p class="stat-num"><span id="cr3-score">0</span><small>%</small></p>
+            <div class="mini-bar"><i id="cr3-bar-fill"></i></div>
+            <p class="stat-sub" id="cr3-eval"></p>
+          </div>
+          <div>
+            <p class="stat-label">분석된 뉴스·시사 영상</p>
+            <p class="stat-num"><span id="news-count">0</span><small>개</small></p>
+            <p class="stat-sub" id="total-filtered-sub"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="v-gauge">
+        <div class="gauge-title"><span>HHI 위치 (0 ~ 10,000)</span><b id="gauge-note"></b></div>
+        <div class="gauge">
+          <div class="pin" id="pin"><div class="bubble" id="pin-bubble">0</div><div class="stem"></div></div>
+          <div class="track" id="track">
+            <i style="width:15%;background:#1F7A52"></i>
+            <i style="width:10%;background:#A86A0A"></i>
+            <i style="width:25%;background:#C2410C"></i>
+            <i style="width:50%;background:#B42318"></i>
+          </div>
+          <div class="ticks">
+            <span style="left:0">0</span><span style="left:15%">1,500</span><span style="left:25%">2,500</span><span style="left:50%">5,000</span><span style="left:100%">10,000</span>
+          </div>
+        </div>
+        <div class="legend4" id="legend4">
+          <div class="lg" style="--c:#1F7A52"><b>1단계 양호</b>1,500 미만</div>
+          <div class="lg" style="--c:#A86A0A"><b>2단계 주의</b>1,500 ~ 2,499</div>
+          <div class="lg" style="--c:#C2410C"><b>3단계 고도 편중</b>2,500 ~ 5,000</div>
+          <div class="lg" style="--c:#B42318"><b>4단계 정보 고립</b>5,000 초과</div>
+        </div>
+      </div>
+    </div>
+
+    <details class="basis"><summary>분석 기준 보기</summary><ul id="basis-list"></ul></details>
+
+    <div class="detail">
+      <div class="panel">
+        <h4>채널별 시청 비중</h4>
+        <canvas id="channelChart" height="260" role="img" aria-label="채널별 시청 비중 도넛 차트"></canvas>
+      </div>
+      <div class="panel">
+        <h4>주요 채널 순위 (상위 10개)</h4>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>순위</th><th>채널명</th><th>시청</th><th>비중</th></tr></thead>
+          <tbody id="channel-table-body"></tbody>
+        </table></div>
+        <div class="info">음악, 게임, 예능 등 일반 영상은 제외하고 뉴스·시사 채널 시청 기록만으로 HHI를 계산합니다. 시청 횟수 기준이며, 정치 성향이나 채널의 좋고 나쁨은 판단하지 않습니다.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <p><strong>개인정보 처리 안내</strong></p>
+  <p>업로드한 시청기록은 서버에 저장하거나 수집하지 않습니다. 파싱과 HHI·CR3 계산은 모두 이 브라우저 안에서 이루어지며, 분석이 끝나면 데이터는 폐기됩니다.</p>
+  <p style="margin-top:14px">꼬꼬꼬몽 · 소프트웨어융합과 소프트웨어공학 · 2026</p>
+</div></footer>
+
+<div class="modal-bg" id="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="up-title">
+    <h3 id="up-title">시청기록 업로드</h3>
+    <div id="upload-view">
+    <div class="takeout-guide">
+      <strong>Google Takeout에서 시청기록 받는 방법</strong>
+      <ol>
+        <li><a href="https://takeout.google.com" target="_blank" rel="noopener">Google Takeout</a>에 접속해 [모두 선택 해제]를 누릅니다.</li>
+        <li>'YouTube 및 YouTube Music'을 체크하고 [시청 기록]만 선택합니다. <span style="color:var(--muted)">(Takeout에서 YouTube 데이터의 정식 이름이며, 음악 기록이 섞여 있어도 뉴스·시사 채널만 분석합니다.)</span></li>
+        <li>전송 방식을 '이메일로 다운로드 링크 전송'으로 설정하고 내보내기를 만듭니다.</li>
+      </ol>
+      <div style="margin-top:8px;font-size:12.5px;color:var(--muted)">받은 파일(시청 기록.html 또는 watch-history.json, ZIP)을 그대로 올리면 됩니다.</div>
+    </div>
+    <label class="drop" for="file">
+      <span id="fileText">HTML, JSON 또는 ZIP 파일 선택</span>
+      <input id="file" type="file" onchange="fileSelected(this)">
+    </label>
+    <div id="uploadMsg" class="err-box" role="alert" hidden></div>
+    <p class="privacy-note">뉴스·시사 채널만 걸러 계산하며, 올린 파일은 분석 후 바로 폐기됩니다.</p>
+    <div class="modal-actions">
+      <button class="btn gray" onclick="closeModal()">취소</button>
+      <button class="btn primary" onclick="analyzeFile()">분석 시작</button>
+    </div>
+    </div>
+    <div id="progress" hidden>
+      <ol class="prog" aria-live="polite">
+        <li data-step="parse"><span>1. 파일 읽기·파싱</span><span class="st">대기</span></li>
+        <li data-step="match"><span>2. 채널 매칭</span><span class="st">대기</span></li>
+        <li data-step="calc"><span>3. 지수 계산</span><span class="st">대기</span></li>
+      </ol>
+      <p class="privacy-note">파일은 이 브라우저 안에서만 처리됩니다.</p>
+      <div class="modal-actions"><button class="btn gray" id="cancel-btn" onclick="cancelAnalysis()">취소</button></div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-bg" id="consent">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+    <h3 id="consent-title">시작하기 전에 확인해 주세요</h3>
+    <ul class="consent-list">
+      <li>업로드하신 시청기록 파일은 <b>이 브라우저에서만</b> 분석되며, 채널 정보(채널명·채널 ID)와 시청일시 외의 정보는 사용하지 않습니다.</li>
+      <li>분석이 끝나면 원본 파일은 서버에 저장되지 않고 즉시 폐기됩니다.</li>
+      <li>분석 결과는 본인에게만 표시되며, 팀 또는 제3자에게 제공되지 않습니다.</li>
+      <li>[결과 저장]을 직접 누른 경우에만 날짜·HHI·CR3·등급·채널별 비중 요약이 이 브라우저에 저장됩니다. 원본 시청기록은 저장되지 않습니다.</li>
+      <li>정치적 성향이나 특정 채널의 호불호는 판단하지 않으며, 정보 소스의 다양성 지표(HHI·CR3)만 제공합니다.</li>
+    </ul>
+    <div class="modal-actions">
+      <button class="btn gray" onclick="closeConsent()">취소</button>
+      <button class="btn primary" id="consent-ok" onclick="agreeConsent()">동의하고 계속하기</button>
+    </div>
+  </div>
+</div>
+
+<script src="./js/config.js"></script>
+<script src="./js/storage.js"></script>
+<script src="./js/parser.js"></script>
+<script src="./js/matcher.js"></script>
+<script src="./js/calc.js"></script>
+<script src="./js/messages.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/dashboard.js"></script>
+<script src="./js/app.js"></script>
+</body>
+</html>
